@@ -27,14 +27,14 @@
         .nav-item.active { color: #007AFF; font-weight: 600; }
         .hidden { display: none !important; }
         
-        /* Animasi Muter Refresh */
+        /* Animasi Refresh Sync */
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
 
-    <!-- SPLASH SCREEN (Mencegah kedip menu login) -->
+    <!-- SPLASH SCREEN -->
     <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white">
         <i class="fa-solid fa-box-open text-6xl mb-4 animate-bounce"></i>
         <h2 class="text-xl font-bold">Memuat Sistem...</h2>
@@ -73,6 +73,7 @@
             <div id="page-form-pengadaan" class="page-content ios-card">
                 <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
                     <input type="hidden" id="edit-id-pengadaan" value="">
+                    
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-1 ml-1">Kategori / Nama Barang</label>
                         <div class="flex gap-2">
@@ -97,11 +98,10 @@
                                             <span class="text-[9px] font-medium text-gray-500">Tambah ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
                                             <img id="preview${i}" class="photo-preview hidden">
                                             <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                            
-                                            <!-- Hidden Inputs -->
-                                            <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
-                                            <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
                                         </div>
+                                        <!-- INPUT BERADA DI LUAR PHOTO-BOX AGAR TIDAK TERJADI DOUBLE CLICK -->
+                                        <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
+                                        <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
                                     `);
                                 }
                             </script>
@@ -209,15 +209,16 @@
         location.reload(); 
     }
 
-    // AUTOSAVE DRAFT FORM
+    // AUTOSAVE DRAFT FORM & FOTO (Bertahan Meski di-Refresh)
     function saveDraft() {
         if(document.getElementById('edit-id-pengadaan').value !== "") return; // Jangan save draft saat lagi mode edit
+        
         const draft = {
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
-            foto1: document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
-            foto2: document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
-            foto3: document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : ''
+            foto1: !document.getElementById('preview1').classList.contains('hidden') && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
+            foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
+            foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : ''
         };
         localStorage.setItem('draft_pengadaan', JSON.stringify(draft));
     }
@@ -237,10 +238,10 @@
         }
     }
 
-    // PILIH KAMERA ATAU GALERI LEWAT POPUP
+    // PILIH KAMERA ATAU GALERI LEWAT POPUP (Otomatis Tutup)
     async function pilihSumberFoto(num) {
-        // Jika sudah ada fotonya, jangan popup. (User harus hapus X dulu)
-        if(document.getElementById('preview'+num).src && document.getElementById('preview'+num).src.indexOf('http') === -1 && document.getElementById('preview'+num).src !== window.location.href) return;
+        // Jika sedang ada gambar, abaikan klik (harus hapus via X dulu)
+        if(!document.getElementById('preview'+num).classList.contains('hidden')) return;
         
         const res = await Swal.fire({
             title: 'Pilih Sumber Foto',
@@ -251,29 +252,80 @@
             confirmButtonColor: '#007AFF', denyButtonColor: '#34C759',
             customClass: { actions: 'flex-col gap-2', confirmButton: 'w-full', denyButton: 'w-full', cancelButton: 'w-full' }
         });
-        if(res.isConfirmed) document.getElementById('cam'+num).click();
-        else if(res.isDenied) document.getElementById('gal'+num).click();
-    }
-
-    // PREVIEW FOTO POPUP LANGSUNG DI APP
-    function previewImgDirect(url) {
-        // Ekstrak ID File dari URL Drive Google
-        let fileId = url.match(/[-\w]{25,}/);
-        if(fileId && fileId[0]) {
-            // Gunakan thumbnail API untuk menghindari block X-Frame
-            let directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`;
-            Swal.fire({
-                imageUrl: directUrl, imageAlt: 'Foto Pengadaan',
-                showConfirmButton: false, showCloseButton: true,
-                customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' },
-                backdrop: `rgba(0,0,0,0.85)`
-            });
-        } else {
-            window.open(url, '_blank');
+        
+        if(res.isConfirmed) {
+            document.getElementById('cam'+num).click();
+        } else if(res.isDenied) {
+            document.getElementById('gal'+num).click();
         }
     }
 
-    // OFFLINE SYNC
+    // PROSES GAMBAR SECARA INSTANT SAAT DIPILIH
+    async function processImageToWatermark(file) {
+        return new Promise((resolve) => {
+            if (!file) return resolve("");
+            const r = new FileReader(); r.readAsDataURL(file);
+            r.onload = e => {
+                const img = new Image(); img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); 
+                    let w = img.width, h = img.height;
+                    if (w > 800) { h = Math.round((h * 800) / w); w = 800; }
+                    canvas.width = w; canvas.height = h; 
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    
+                    ctx.font = "bold 20px Arial"; ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 4;
+                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nTime: ${new Date().toLocaleString('id-ID')}`;
+                    const lines = txt.split('\n'); let y = h - (lines.length * 25) - 10;
+                    lines.forEach(line => { ctx.fillText(line, 15, y); y += 25; });
+                    
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            };
+        });
+    }
+
+    async function handlePhoto(input, num) {
+        if(input.files[0]) {
+            Swal.fire({title: 'Memproses Foto...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            // Kompresi dan Watermark seketika!
+            const compressedBase64 = await processImageToWatermark(input.files[0]);
+            
+            document.getElementById('preview' + num).src = compressedBase64;
+            document.getElementById('preview' + num).classList.remove('hidden');
+            document.getElementById('btn-hapus-' + num).classList.remove('hidden');
+            
+            saveDraft(); // Amankan di Draft
+            Swal.close(); // Tutup popup loading
+        }
+    }
+
+    function removePhoto(num) {
+        document.getElementById('cam' + num).value = ''; 
+        document.getElementById('gal' + num).value = '';
+        document.getElementById('preview' + num).src = ''; 
+        document.getElementById('preview' + num).classList.add('hidden');
+        document.getElementById('btn-hapus-' + num).classList.add('hidden');
+        saveDraft(); 
+    }
+
+    // PREVIEW FOTO POPUP MELAYANG (Tanpa buka tab baru)
+    function previewImgDirect(url) {
+        let directUrl = url;
+        let fileId = url.match(/[-\w]{25,}/);
+        if(fileId && fileId[0]) {
+            directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`; // Extract via API Thumbnail
+        }
+        Swal.fire({
+            imageUrl: directUrl, imageAlt: 'Foto Pengadaan',
+            showConfirmButton: false, showCloseButton: true,
+            customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' },
+            backdrop: `rgba(0,0,0,0.85)`
+        });
+    }
+
+    // SUBMIT & SYNC DATA
     function updateSyncBadge() {
         const q = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         const badge = document.getElementById('sync-badge');
@@ -281,34 +333,39 @@
     }
 
     async function processForm() {
-        // Wajib Foto 1 jika tidak mode edit
-        if(document.getElementById('edit-id-pengadaan').value === "" && !document.getElementById('preview1').src.startsWith('data:')) {
+        const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
+        const isFoto1Kosong = document.getElementById('preview1').classList.contains('hidden');
+
+        // Validasi Foto Wajib
+        if(!isEdit && isFoto1Kosong) {
             return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
         }
 
-        const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
         const p = {
             action: isEdit ? 'edit_pengadaan' : 'submit_pengadaan', 
             local_id: 'REQ-' + Date.now(), id_pengadaan: document.getElementById('edit-id-pengadaan').value,
             nik: currentUser.nik, nama: currentUser.nama, store: currentUser.store,
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
-            foto1: await compressImage(document.getElementById('cam1'), document.getElementById('gal1')),
-            foto2: await compressImage(document.getElementById('cam2'), document.getElementById('gal2')),
-            foto3: await compressImage(document.getElementById('cam3'), document.getElementById('gal3')),
+            
+            // Foto Diambil Langsung dari Src karena sudah berupa Base64 (Sangat Cepat!)
+            foto1: !isFoto1Kosong && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
+            foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
+            foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : '',
             ip: globalIP, lokasi: globalLoc
         };
         
         let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         queue.push(p); localStorage.setItem('offlineQueue', JSON.stringify(queue));
         
+        // Reset Bersih
         document.getElementById('form-submit').reset();
         [1,2,3].forEach(i => removePhoto(i));
-        localStorage.removeItem('draft_pengadaan'); // Hapus draft
+        localStorage.removeItem('draft_pengadaan'); // Kosongkan draft setelah submit
         cancelEdit();
         
         updateSyncBadge();
-        Swal.fire({icon: 'success', title: 'Antrean Disimpan', text: 'Data akan di-upload ke server.', timer: 2000, showConfirmButton: false});
+        Swal.fire({icon: 'success', title: 'Data Diajukan', text: 'Data disimpan di antrean & akan disinkronkan.', timer: 2000, showConfirmButton: false});
         syncOffline(); 
         switchTab('data-pengadaan');
     }
@@ -319,7 +376,7 @@
         if(queue.length === 0) return;
 
         isSyncing = true;
-        document.getElementById('sync-icon').classList.add('spin'); // Putar icon
+        document.getElementById('sync-icon').classList.add('spin');
 
         while(queue.length > 0) {
             const item = queue[0];
@@ -328,8 +385,8 @@
                 queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue));
                 updateSyncBadge();
             } else {
-                if(res.message.includes('habis')) Swal.fire('Gagal', res.message, 'error'); // Waktu edit habis
-                break; // Stop loop karena offline
+                if(res.message && res.message.includes('habis')) Swal.fire('Gagal', res.message, 'error');
+                break; // Stop jika error/offline
             }
         }
         document.getElementById('sync-icon').classList.remove('spin');
@@ -337,6 +394,7 @@
         if(!document.getElementById('page-data-pengadaan').classList.contains('hidden')) fetchHistory();
     }
 
+    // TAMPILAN MENU & HISTORY
     function switchTab(tabId) {
         document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -355,7 +413,7 @@
             allHistoryData = isAdminView ? res.data : res.data.filter(d => d.Store === currentUser.store);
             displayedCount = 10; renderHistory();
         } else {
-            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Offline. Cek koneksi Anda.</div>';
+            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Anda sedang Offline.</div>';
         }
     }
 
@@ -376,9 +434,7 @@
             // LOGIC WAKTU EDIT & CANCEL (STAFF)
             let btnAction = '';
             if(!isAdminView) {
-                let reqTime = new Date(d.Waktu).getTime();
-                let timeDiffMin = (new Date().getTime() - reqTime) / 60000;
-                
+                let timeDiffMin = (new Date().getTime() - new Date(d.Waktu).getTime()) / 60000;
                 if(d.Status === 'Pending') {
                     if(timeDiffMin <= 10) {
                         btnAction = `<button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="mt-2 text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-xl w-full font-bold shadow-sm">Edit Pengajuan (Maks 10 Mnt)</button>`;
@@ -394,7 +450,7 @@
                     let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : 'Approve';
                     let rejText = d.Status === 'Request Cancel' ? 'Setuju Cancel' : 'Reject';
                     let rejVal = d.Status === 'Request Cancel' ? 'Canceled' : 'Rejected';
-                    let accVal = d.Status === 'Request Cancel' ? 'Pending' : 'Approved'; // Tolak cancel = balik ke pending
+                    let accVal = d.Status === 'Request Cancel' ? 'Pending' : 'Approved'; 
                     
                     btnAction = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', '${accVal}')" class="bg-green-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${accText}</button><button onclick="actionStatus('${d.ID_Pengadaan}', '${rejVal}')" class="bg-red-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${rejText}</button></div>`;
                 } else if(d.Status === 'Approved') {
@@ -428,9 +484,7 @@
 
     async function requestCancel(id) {
         Swal.fire({
-            title: 'Yakin batalkan?',
-            text: 'Admin harus menyetujui pembatalan ini.',
-            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan'
+            title: 'Yakin batalkan?', text: 'Admin harus menyetujui pembatalan ini.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan'
         }).then(async (result) => {
             if (result.isConfirmed) {
                 Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
@@ -456,7 +510,7 @@
         document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan';
         document.getElementById('form-submit').reset();
         [1,2,3].forEach(i => removePhoto(i));
-        loadDraft(); // Kembalikan apa yg ada di draft sblm klik edit
+        loadDraft(); 
     }
 
     async function actionStatus(id, status) {
@@ -477,21 +531,7 @@
         }
     }
 
-    /* COMPRESS UTILS */
-    function handlePhoto(input, num) {
-        if(input.files[0]) {
-            document.getElementById('preview' + num).src = URL.createObjectURL(input.files[0]);
-            document.getElementById('preview' + num).classList.remove('hidden');
-            document.getElementById('btn-hapus-' + num).classList.remove('hidden');
-            saveDraft(); // Simpan draft tiap ganti foto
-        }
-    }
-    function removePhoto(num) {
-        document.getElementById('cam' + num).value = ''; document.getElementById('gal' + num).value = '';
-        document.getElementById('preview' + num).src = ''; document.getElementById('preview' + num).classList.add('hidden');
-        document.getElementById('btn-hapus-' + num).classList.add('hidden');
-        saveDraft(); // Simpan draft saat foto dihapus
-    }
+    // MASTER LIST DATA 
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
@@ -501,27 +541,6 @@
         Swal.fire({ title: 'Pilih Barang', html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`, showConfirmButton: false, showCloseButton: true });
     }
     function selectItem(val) { document.getElementById('item-input').value = val; saveDraft(); Swal.close(); }
-    
-    function compressImage(c, g) {
-        let file = c.files[0] || g.files[0];
-        return new Promise((resolve) => {
-            if (!file) return resolve("");
-            const r = new FileReader(); r.readAsDataURL(file);
-            r.onload = e => {
-                const img = new Image(); img.src = e.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas'); let w = img.width, h = img.height;
-                    if (w > 800) { h = Math.round((h * 800) / w); w = 800; }
-                    canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-                    ctx.font = "bold 20px Arial"; ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 4;
-                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nTime: ${new Date().toLocaleString('id-ID')}`;
-                    const lines = txt.split('\n'); let y = h - (lines.length * 25) - 10;
-                    lines.forEach(line => { ctx.fillText(line, 15, y); y += 25; });
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
-                };
-            };
-        });
-    }
 </script>
 </body>
 </html>
