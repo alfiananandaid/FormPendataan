@@ -236,7 +236,6 @@
     // POPUP PILIHAN FOTO
     async function pilihSumberFoto(num) {
         if(!document.getElementById('preview'+num).classList.contains('hidden')) return;
-        
         const res = await Swal.fire({
             title: 'Pilih Sumber Foto',
             showDenyButton: true, showCancelButton: true,
@@ -246,7 +245,6 @@
             confirmButtonColor: '#007AFF', denyButtonColor: '#34C759',
             customClass: { actions: 'flex-col gap-2', confirmButton: 'w-full', denyButton: 'w-full', cancelButton: 'w-full' }
         });
-        
         if(res.isConfirmed) document.getElementById('cam'+num).click();
         else if(res.isDenied) document.getElementById('gal'+num).click();
     }
@@ -261,7 +259,6 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas'); 
                     let w = img.width, h = img.height;
-                    // Max width 1000px agar font lebih proporsional dan gambar bagus
                     if (w > 1000) { h = Math.round((h * 1000) / w); w = 1000; }
                     canvas.width = w; canvas.height = h; 
                     const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
@@ -269,16 +266,13 @@
                     ctx.font = "bold 22px Arial"; 
                     ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; 
                     ctx.shadowColor = "rgba(0,0,0,0.8)"; 
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 2;
-                    ctx.shadowOffsetY = 2;
+                    ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
                     
                     const timeStr = new Date().toLocaleString('id-ID');
                     const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nJam: ${timeStr}\nLokasi: ${globalLoc}`;
                     const lines = txt.split('\n'); 
                     let y = h - (lines.length * 30) - 15;
                     lines.forEach(line => { ctx.fillText(line, 20, y); y += 30; });
-                    
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
             };
@@ -289,21 +283,17 @@
         if(input.files[0]) {
             Swal.fire({title: 'Memproses Foto...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             const compressedBase64 = await processImageToWatermark(input.files[0]);
-            
             document.getElementById('preview' + num).src = compressedBase64;
             document.getElementById('preview' + num).classList.remove('hidden');
             document.getElementById('btn-hapus-' + num).classList.remove('hidden');
-            
             saveDraft(); 
             Swal.close(); 
         }
     }
 
     function removePhoto(num) {
-        document.getElementById('cam' + num).value = ''; 
-        document.getElementById('gal' + num).value = '';
-        document.getElementById('preview' + num).src = ''; 
-        document.getElementById('preview' + num).classList.add('hidden');
+        document.getElementById('cam' + num).value = ''; document.getElementById('gal' + num).value = '';
+        document.getElementById('preview' + num).src = ''; document.getElementById('preview' + num).classList.add('hidden');
         document.getElementById('btn-hapus-' + num).classList.add('hidden');
         saveDraft(); 
     }
@@ -339,7 +329,6 @@
             nik: currentUser.nik, nama: currentUser.nama, store: currentUser.store,
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
-            
             foto1: !isFoto1Kosong && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
             foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
             foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : '',
@@ -518,15 +507,46 @@
         }
     }
 
+    // MASTER LIST DATA DENGAN BADGE (Pernah Diajukan / Baru)
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
     }
     
-    function showMasterList() {
-        let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b active:bg-gray-100" onclick="selectItem('${item}')">${item}</button>`).join('');
-        Swal.fire({ title: 'Pilih Barang', html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`, showConfirmButton: false, showCloseButton: true });
+    async function showMasterList() {
+        Swal.fire({ title: 'Memuat List...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        // Ambil data history secara instan jika belum tersedia di background
+        let historyToCheck = allHistoryData;
+        if (historyToCheck.length === 0) {
+            const res = await apiCall({ action: 'get_data' });
+            if (res.status === 'success') historyToCheck = res.data;
+        }
+
+        // Filter riwayat yang sesuai dengan Store yang sedang login
+        let storeHistory = historyToCheck.filter(d => d.Store === currentUser.store);
+        let requestedItems = new Set(storeHistory.map(d => d.Permintaan));
+
+        let htmlList = masterBarangList.map(item => {
+            let isPernah = requestedItems.has(item);
+            let badge = isPernah 
+                ? '<span class="text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>Pernah Diajukan</span>' 
+                : '<span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-bold whitespace-nowrap"><i class="fa-solid fa-star mr-1"></i>Baru</span>';
+            
+            return `<button class="w-full text-left p-3 border-b active:bg-gray-100 flex justify-between items-center gap-2" onclick="selectItem('${item}')">
+                <span class="font-medium text-gray-700 text-sm">${item}</span>
+                ${badge}
+            </button>`;
+        }).join('');
+        
+        Swal.fire({ 
+            title: 'Pilih Kategori Barang', 
+            html: `<div class="max-h-60 overflow-y-auto text-sm text-left">${htmlList}</div>`, 
+            showConfirmButton: false, 
+            showCloseButton: true 
+        });
     }
+    
     function selectItem(val) { document.getElementById('item-input').value = val; saveDraft(); Swal.close(); }
 </script>
 </body>
