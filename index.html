@@ -138,11 +138,10 @@
 <script>
     if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxVEDVJeqOgeP44HP7dhZLKpbn-EyrmelMgLGh63awxFpoxOgaR6zaRYwFRqrRGMPEh/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHXvznWJpwPQb5l2DDyV1Xf1ToADR9RjIJ8LSRZKSL65mJqxAm5f3bv4pOyIyG_XCm/exec'; 
     let currentUser = null, globalIP = 'Unknown', globalLoc = 'Akses Lokasi Ditolak';
     let masterBarangList = [], allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false, isSyncing = false;
 
-    // Trackers
     fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>globalIP=d.ip).catch(e=>{});
     navigator.geolocation.getCurrentPosition(p=>globalLoc=`Lat: ${p.coords.latitude.toFixed(5)}, Lng: ${p.coords.longitude.toFixed(5)}`, e=>{});
 
@@ -205,7 +204,6 @@
         location.reload(); 
     }
 
-    // DRAFT
     function saveDraft() {
         if(document.getElementById('edit-id-pengadaan').value !== "") return; 
         const draft = {
@@ -233,7 +231,6 @@
         }
     }
 
-    // POPUP PILIHAN FOTO
     async function pilihSumberFoto(num) {
         if(!document.getElementById('preview'+num).classList.contains('hidden')) return;
         const res = await Swal.fire({
@@ -249,7 +246,6 @@
         else if(res.isDenied) document.getElementById('gal'+num).click();
     }
 
-    // KOMPRESI & WATERMARK (User, Store, Jam, Lokasi)
     async function processImageToWatermark(file) {
         return new Promise((resolve) => {
             if (!file) return resolve("");
@@ -364,7 +360,7 @@
                 queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue));
                 updateSyncBadge();
             } else {
-                if(res.message && res.message.includes('habis')) Swal.fire('Gagal', res.message, 'error');
+                if(res.message && res.message.includes('Pending')) Swal.fire('Gagal', res.message, 'error');
                 break; 
             }
         }
@@ -411,13 +407,13 @@
 
             let btnAction = '';
             if(!isAdminView) {
-                let timeDiffMin = (new Date().getTime() - new Date(d.Waktu).getTime()) / 60000;
+                // LOGIKA BARU: Jika status Pending, selalu bisa Edit & Batal (Tidak ada batas 10 menit)
                 if(d.Status === 'Pending') {
-                    if(timeDiffMin <= 10) {
-                        btnAction = `<button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="mt-2 text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-xl w-full font-bold shadow-sm">Edit Pengajuan (Maks 10 Mnt)</button>`;
-                    } else {
-                        btnAction = `<button onclick="requestCancel('${d.ID_Pengadaan}')" class="mt-2 text-xs bg-red-50 text-red-600 border border-red-100 px-3 py-2 rounded-xl w-full font-bold shadow-sm">Batalkan Pengajuan</button>`;
-                    }
+                    btnAction = `
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-2 rounded-xl w-1/2 font-bold text-xs shadow-sm"><i class="fa-solid fa-pen mr-1"></i> Edit</button>
+                        <button onclick="requestCancel('${d.ID_Pengadaan}')" class="bg-red-50 text-red-600 border border-red-100 px-3 py-2 rounded-xl w-1/2 font-bold text-xs shadow-sm"><i class="fa-solid fa-xmark mr-1"></i> Batal</button>
+                    </div>`;
                 }
             }
 
@@ -477,7 +473,7 @@
         document.getElementById('deskripsi').value = desk;
         document.getElementById('btn-cancel-edit').classList.remove('hidden');
         document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Perubahan';
-        Swal.fire({icon: 'info', title: 'Edit Mode', text: 'Sisa waktu Anda 10 menit.', timer:2000});
+        Swal.fire({icon: 'info', title: 'Edit Mode', text: 'Silakan perbarui data pengajuan Anda.', timer:2000});
     }
 
     function cancelEdit() {
@@ -507,41 +503,73 @@
         }
     }
 
-    // MASTER LIST DATA DENGAN BADGE (Pernah Diajukan / Baru)
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
     }
     
+    window.filterKategori = function(val) {
+        let term = val.toLowerCase();
+        let items = document.querySelectorAll('.kategori-item');
+        items.forEach(el => {
+            if(el.getAttribute('data-nama').includes(term)) {
+                el.style.display = 'flex';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    }
+
     async function showMasterList() {
         Swal.fire({ title: 'Memuat List...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
-        // Ambil data history secara instan jika belum tersedia di background
         let historyToCheck = allHistoryData;
         if (historyToCheck.length === 0) {
             const res = await apiCall({ action: 'get_data' });
-            if (res.status === 'success') historyToCheck = res.data;
+            if (res.status === 'success') {
+                allHistoryData = res.data;
+                historyToCheck = res.data;
+            }
         }
 
-        // Filter riwayat yang sesuai dengan Store yang sedang login
         let storeHistory = historyToCheck.filter(d => d.Store === currentUser.store);
-        let requestedItems = new Set(storeHistory.map(d => d.Permintaan));
+        
+        let historyMap = {};
+        storeHistory.forEach(d => {
+            if(!historyMap[d.Permintaan]) {
+                historyMap[d.Permintaan] = d;
+            }
+        });
 
-        let htmlList = masterBarangList.map(item => {
-            let isPernah = requestedItems.has(item);
-            let badge = isPernah 
-                ? '<span class="text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>Pernah Diajukan</span>' 
-                : '<span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-bold whitespace-nowrap"><i class="fa-solid fa-star mr-1"></i>Baru</span>';
+        let htmlListItems = masterBarangList.map(item => {
+            let lastReq = historyMap[item];
+            let badge = '';
+            let dateInfo = '';
             
-            return `<button class="w-full text-left p-3 border-b active:bg-gray-100 flex justify-between items-center gap-2" onclick="selectItem('${item}')">
-                <span class="font-medium text-gray-700 text-sm">${item}</span>
+            if(lastReq) {
+                let statusColor = lastReq.Status === 'Approved' ? 'text-green-600' : (lastReq.Status === 'Pending' ? 'text-yellow-600' : 'text-red-600');
+                let tgl = new Date(lastReq.Waktu).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+                
+                badge = `<span class="text-[9px] bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 font-bold whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Pernah</span>`;
+                dateInfo = `<div class="text-[10px] text-gray-500 mt-1">Diinput Tanggal ${tgl} <span class="font-bold ${statusColor}">(${lastReq.Status})</span></div>`;
+            } else {
+                badge = `<span class="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 font-bold whitespace-nowrap"><i class="fa-solid fa-star mr-1"></i>Baru</span>`;
+            }
+            
+            return `<button class="kategori-item w-full text-left p-3 border-b active:bg-gray-100 flex justify-between items-start gap-2" onclick="selectItem('${item}')" data-nama="${item.toLowerCase()}">
+                <div>
+                    <span class="font-bold text-gray-700 text-sm">${item}</span>
+                    ${dateInfo}
+                </div>
                 ${badge}
             </button>`;
         }).join('');
         
+        let searchInput = `<input type="text" id="search-kategori" class="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 mb-3 text-sm outline-none focus:border-blue-500" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">`;
+
         Swal.fire({ 
             title: 'Pilih Kategori Barang', 
-            html: `<div class="max-h-60 overflow-y-auto text-sm text-left">${htmlList}</div>`, 
+            html: searchInput + `<div id="kategori-container" class="max-h-60 overflow-y-auto text-sm text-left border border-gray-100 rounded-xl">${htmlListItems}</div>`, 
             showConfirmButton: false, 
             showCloseButton: true 
         });
