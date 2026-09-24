@@ -16,22 +16,32 @@
         .ios-input { background: #F7F7F9; border: 1px solid #E5E5EA; border-radius: 12px; padding: 12px 14px; width: 100%; outline: none; transition: 0.2s;}
         .ios-input:focus { border-color: #007AFF; background: white;}
         .ios-btn { background: #007AFF; color: white; border-radius: 14px; padding: 14px; width: 100%; font-weight: 600; transition: 0.2s;}
+        
         .photo-box { aspect-ratio: 1/1; border: 2px dashed #D1D1D6; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #FAFAFC; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s;}
+        .photo-box:active { background: #E5E5EA; }
         .photo-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10; }
-        .btn-gallery { position: absolute; top: 5px; left: 5px; background: rgba(255,255,255,0.9); color: #007AFF; border-radius: 50%; width: 28px; height: 28px; z-index: 20; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .btn-remove-photo { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 24px; height: 24px; z-index: 20; display: flex; align-items: center; justify-content: center; }
+        .btn-remove-photo { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 26px; height: 26px; z-index: 20; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;}
+        
         .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; }
         .nav-item { color: #8E8E93; transition: 0.2s; }
         .nav-item.active { color: #007AFF; font-weight: 600; }
         .hidden { display: none !important; }
+        
+        /* Animasi Muter Refresh */
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
 
+    <!-- SPLASH SCREEN (Mencegah kedip menu login) -->
+    <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white">
+        <i class="fa-solid fa-box-open text-6xl mb-4 animate-bounce"></i>
+        <h2 class="text-xl font-bold">Memuat Sistem...</h2>
+    </div>
+
     <!-- LOGIN -->
-    <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+    <div id="login-view" class="hidden min-h-screen items-center justify-center p-4">
         <div class="ios-card w-full max-w-sm">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl"><i class="fa-solid fa-box"></i></div>
@@ -52,10 +62,9 @@
                 <h1 id="page-title" class="text-2xl font-bold">Form Pengajuan</h1>
                 <p id="user-store-info" class="text-xs text-gray-500 mt-1"></p>
             </div>
-            <!-- SYNC ICON -->
-            <button onclick="syncOffline()" class="relative text-blue-600 p-2 bg-blue-50 rounded-full active:bg-blue-100">
-                <i id="sync-icon" class="fa-solid fa-rotate text-xl"></i>
-                <span id="sync-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden border border-white"></span>
+            <button onclick="syncOffline()" class="relative text-blue-600 p-2.5 bg-blue-50 rounded-full active:bg-blue-100 transition">
+                <i id="sync-icon" class="fa-solid fa-rotate text-lg"></i>
+                <span id="sync-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden border-2 border-white"></span>
             </button>
         </div>
 
@@ -63,17 +72,18 @@
             <!-- FORM PENGADAAN -->
             <div id="page-form-pengadaan" class="page-content ios-card">
                 <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
+                    <input type="hidden" id="edit-id-pengadaan" value="">
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-1 ml-1">Kategori / Nama Barang</label>
                         <div class="flex gap-2">
-                            <input type="text" id="item-input" class="ios-input flex-1" placeholder="Ketik bebas atau pilih..." required>
+                            <input type="text" id="item-input" class="ios-input flex-1" placeholder="Ketik bebas atau pilih..." oninput="saveDraft()" required>
                             <button type="button" onclick="showMasterList()" class="bg-blue-100 text-blue-600 px-4 rounded-xl shadow-sm"><i class="fa-solid fa-list-ul"></i></button>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-1 ml-1">Deskripsi & Keterangan <span class="text-red-500">*</span></label>
-                        <textarea id="deskripsi" class="ios-input min-h-[80px]" required></textarea>
+                        <textarea id="deskripsi" class="ios-input min-h-[80px]" oninput="saveDraft()" required></textarea>
                     </div>
                     
                     <div class="mb-6">
@@ -82,13 +92,14 @@
                             <script>
                                 for(let i=1; i<=3; i++) {
                                     document.write(`
-                                        <div class="photo-box text-center" onclick="document.getElementById('cam${i}').click()">
-                                            <button type="button" class="btn-gallery" onclick="event.stopPropagation(); document.getElementById('gal${i}').click();"><i class="fa-solid fa-images text-xs"></i></button>
-                                            <i class="fa-solid fa-camera text-gray-400 text-xl mb-1"></i>
-                                            <span class="text-[9px] font-medium text-gray-500">Foto ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
+                                        <div class="photo-box text-center" onclick="pilihSumberFoto(${i})">
+                                            <i class="fa-solid fa-camera-retro text-gray-400 text-xl mb-1 mt-2"></i>
+                                            <span class="text-[9px] font-medium text-gray-500">Tambah ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
                                             <img id="preview${i}" class="photo-preview hidden">
-                                            <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-xs"></i></button>
-                                            <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})" ${i==1?'required':''}>
+                                            <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+                                            
+                                            <!-- Hidden Inputs -->
+                                            <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
                                             <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
                                         </div>
                                     `);
@@ -96,13 +107,14 @@
                             </script>
                         </div>
                     </div>
-                    <button type="submit" class="ios-btn bg-blue-600"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Simpan (Upload Latar Belakang)</button>
+                    <button type="submit" id="btn-submit" class="ios-btn bg-blue-600"><i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan</button>
+                    <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="ios-btn bg-gray-200 text-gray-700 mt-3 hidden">Batal Edit</button>
                 </form>
             </div>
 
             <!-- HISTORY & ADMIN PAGE -->
             <div id="page-data-pengadaan" class="page-content hidden">
-                <input type="text" id="search-history" class="ios-input mb-4" placeholder="Cari data..." oninput="searchData(this.value)">
+                <input type="text" id="search-history" class="ios-input mb-4" placeholder="Cari data pengadaan..." oninput="searchData(this.value)">
                 <div id="list-history-container" class="space-y-4"></div>
                 <button id="btn-load-more" onclick="loadMoreData()" class="ios-btn bg-gray-200 text-gray-700 mt-4 hidden">Tampilkan 10 Lagi</button>
             </div>
@@ -126,14 +138,11 @@
     </div>
 
 <script>
-    // PWA REGISTRATION
-    if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxtYSdTsNpFBrVnmGqQZk0SfukE3ohSFfPVwIAVSNGAZhe7kIAkRmtkcckActRZ7ReG/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsd4efk-ieZacyAwAoczb6lkJCdkiphmyOQB3jwIgbxN3w8palmGXB98uRwJwgU4FB/exec'; 
     let currentUser = null, globalIP = 'Unknown', globalLoc = 'Akses Lokasi Ditolak';
-    let masterBarangList = [];
-    let allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false;
-    let isSyncing = false;
+    let masterBarangList = [], allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false, isSyncing = false;
 
     // Trackers
     fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>globalIP=d.ip).catch(e=>{});
@@ -145,29 +154,37 @@
         catch (err) { return {status: 'error', message: 'Offline'}; }
     }
 
-    // CHECK SESSION ON LOAD (Persistent Login 12 Jam)
+    // CHECK SESSION ON LOAD
     window.onload = async function() {
         updateSyncBadge();
         initSystemData();
         const savedSession = localStorage.getItem('session_user');
         const savedTime = localStorage.getItem('session_time');
         
-        if(savedSession && savedTime) {
-            // Cek jika lebih dari 12 Jam (43200000 ms)
-            if(Date.now() - parseInt(savedTime) > 43200000) { logout(); return; }
-            
+        if(savedSession && savedTime && (Date.now() - parseInt(savedTime) < 43200000)) {
             currentUser = JSON.parse(savedSession);
-            // Verify Token ke Backend
             const res = await apiCall({action: 'check_session', nik: currentUser.nik, token: currentUser.token});
             if(res.status === 'success') {
                 proceedToDashboard();
-                syncOffline(); // Auto sync on open
-            } else { logout(); Swal.fire('Sesi Berakhir', res.message, 'warning'); }
+                loadDraft();
+                syncOffline();
+            } else forceLogin(res.message);
+        } else {
+            forceLogin();
         }
     };
 
+    function forceLogin(msg = '') {
+        document.getElementById('splash-view').classList.add('hidden');
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('login-view').classList.add('flex');
+        if(msg) Swal.fire('Sesi Berakhir', msg, 'warning');
+    }
+
     function proceedToDashboard() {
+        document.getElementById('splash-view').classList.add('hidden');
         document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('login-view').classList.remove('flex');
         document.getElementById('dashboard-view').classList.remove('hidden');
         document.getElementById('user-store-info').innerHTML = `<i class="fa-solid fa-store text-blue-500"></i> ${currentUser.store}`;
         if (currentUser.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
@@ -178,7 +195,6 @@
         const btn = document.getElementById('btn-login'); btn.innerHTML = 'Loading...'; btn.disabled = true;
         const res = await apiCall({ action: 'login', nik: document.getElementById('login-nik').value, password: document.getElementById('login-pass').value, ip: globalIP, lokasi: globalLoc });
         btn.innerHTML = 'Masuk'; btn.disabled = false;
-        
         if (res.status === 'success') {
             localStorage.setItem('session_user', JSON.stringify(res.user));
             localStorage.setItem('session_time', Date.now().toString());
@@ -189,10 +205,75 @@
 
     function logout() { 
         localStorage.removeItem('session_user'); localStorage.removeItem('session_time');
+        localStorage.removeItem('draft_pengadaan');
         location.reload(); 
     }
 
-    // OFFLINE QUEUE SYSTEM
+    // AUTOSAVE DRAFT FORM
+    function saveDraft() {
+        if(document.getElementById('edit-id-pengadaan').value !== "") return; // Jangan save draft saat lagi mode edit
+        const draft = {
+            permintaan: document.getElementById('item-input').value,
+            deskripsi: document.getElementById('deskripsi').value,
+            foto1: document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
+            foto2: document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
+            foto3: document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : ''
+        };
+        localStorage.setItem('draft_pengadaan', JSON.stringify(draft));
+    }
+
+    function loadDraft() {
+        const draft = JSON.parse(localStorage.getItem('draft_pengadaan'));
+        if(draft) {
+            if(draft.permintaan) document.getElementById('item-input').value = draft.permintaan;
+            if(draft.deskripsi) document.getElementById('deskripsi').value = draft.deskripsi;
+            for(let i=1; i<=3; i++) {
+                if(draft['foto'+i]) {
+                    document.getElementById('preview'+i).src = draft['foto'+i];
+                    document.getElementById('preview'+i).classList.remove('hidden');
+                    document.getElementById('btn-hapus-'+i).classList.remove('hidden');
+                }
+            }
+        }
+    }
+
+    // PILIH KAMERA ATAU GALERI LEWAT POPUP
+    async function pilihSumberFoto(num) {
+        // Jika sudah ada fotonya, jangan popup. (User harus hapus X dulu)
+        if(document.getElementById('preview'+num).src && document.getElementById('preview'+num).src.indexOf('http') === -1 && document.getElementById('preview'+num).src !== window.location.href) return;
+        
+        const res = await Swal.fire({
+            title: 'Pilih Sumber Foto',
+            showDenyButton: true, showCancelButton: true,
+            confirmButtonText: '<i class="fa-solid fa-camera mr-2"></i> Kamera',
+            denyButtonText: '<i class="fa-solid fa-images mr-2"></i> Galeri',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#007AFF', denyButtonColor: '#34C759',
+            customClass: { actions: 'flex-col gap-2', confirmButton: 'w-full', denyButton: 'w-full', cancelButton: 'w-full' }
+        });
+        if(res.isConfirmed) document.getElementById('cam'+num).click();
+        else if(res.isDenied) document.getElementById('gal'+num).click();
+    }
+
+    // PREVIEW FOTO POPUP LANGSUNG DI APP
+    function previewImgDirect(url) {
+        // Ekstrak ID File dari URL Drive Google
+        let fileId = url.match(/[-\w]{25,}/);
+        if(fileId && fileId[0]) {
+            // Gunakan thumbnail API untuk menghindari block X-Frame
+            let directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`;
+            Swal.fire({
+                imageUrl: directUrl, imageAlt: 'Foto Pengadaan',
+                showConfirmButton: false, showCloseButton: true,
+                customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' },
+                backdrop: `rgba(0,0,0,0.85)`
+            });
+        } else {
+            window.open(url, '_blank');
+        }
+    }
+
+    // OFFLINE SYNC
     function updateSyncBadge() {
         const q = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         const badge = document.getElementById('sync-badge');
@@ -200,8 +281,15 @@
     }
 
     async function processForm() {
+        // Wajib Foto 1 jika tidak mode edit
+        if(document.getElementById('edit-id-pengadaan').value === "" && !document.getElementById('preview1').src.startsWith('data:')) {
+            return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
+        }
+
+        const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
         const p = {
-            action: 'submit_pengadaan', local_id: 'REQ-' + Date.now(),
+            action: isEdit ? 'edit_pengadaan' : 'submit_pengadaan', 
+            local_id: 'REQ-' + Date.now(), id_pengadaan: document.getElementById('edit-id-pengadaan').value,
             nik: currentUser.nik, nama: currentUser.nama, store: currentUser.store,
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
@@ -211,18 +299,17 @@
             ip: globalIP, lokasi: globalLoc
         };
         
-        // Save to Queue
         let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-        queue.push(p);
-        localStorage.setItem('offlineQueue', JSON.stringify(queue));
+        queue.push(p); localStorage.setItem('offlineQueue', JSON.stringify(queue));
         
-        // Reset Form
         document.getElementById('form-submit').reset();
         [1,2,3].forEach(i => removePhoto(i));
+        localStorage.removeItem('draft_pengadaan'); // Hapus draft
+        cancelEdit();
         
         updateSyncBadge();
-        Swal.fire({icon: 'info', title: 'Tersimpan!', text: 'Data disimpan di antrean. Proses upload berjalan di latar belakang.', timer: 2000});
-        syncOffline(); // Trigger sync
+        Swal.fire({icon: 'success', title: 'Antrean Disimpan', text: 'Data akan di-upload ke server.', timer: 2000, showConfirmButton: false});
+        syncOffline(); 
         switchTab('data-pengadaan');
     }
 
@@ -232,28 +319,22 @@
         if(queue.length === 0) return;
 
         isSyncing = true;
-        document.getElementById('sync-icon').classList.add('spin');
+        document.getElementById('sync-icon').classList.add('spin'); // Putar icon
 
         while(queue.length > 0) {
             const item = queue[0];
             const res = await apiCall(item);
             if(res.status === 'success') {
-                queue.shift(); // Remove from queue
-                localStorage.setItem('offlineQueue', JSON.stringify(queue));
+                queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue));
                 updateSyncBadge();
             } else {
-                break; // Stop jika error/offline
+                if(res.message.includes('habis')) Swal.fire('Gagal', res.message, 'error'); // Waktu edit habis
+                break; // Stop loop karena offline
             }
         }
         document.getElementById('sync-icon').classList.remove('spin');
         isSyncing = false;
-        if(document.getElementById('page-data-pengadaan').classList.contains('hidden') === false) fetchHistory();
-    }
-
-    // PREVIEW FOTO GOOGLE DRIVE (FIX)
-    // GDrive image via Script tidak bisa embed di Web. Fix: Buka di Tab Baru.
-    function openGDrivePhoto(url) {
-        if(url && url.startsWith('http')) window.open(url, '_blank');
+        if(!document.getElementById('page-data-pengadaan').classList.contains('hidden')) fetchHistory();
     }
 
     function switchTab(tabId) {
@@ -268,14 +349,13 @@
 
     async function fetchHistory() {
         const container = document.getElementById('list-history-container');
-        container.innerHTML = '<div class="text-center p-10"><i class="fa-solid fa-spinner fa-spin"></i><br>Sinkronisasi Data...</div>';
+        container.innerHTML = '<div class="text-center p-10"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>Sinkronisasi Data...</div>';
         const res = await apiCall({ action: 'get_data' });
         if (res.status === 'success') {
             allHistoryData = isAdminView ? res.data : res.data.filter(d => d.Store === currentUser.store);
-            displayedCount = 10;
-            renderHistory();
+            displayedCount = 10; renderHistory();
         } else {
-            container.innerHTML = '<div class="text-center p-10 text-red-500">Anda sedang offline.</div>';
+            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Offline. Cek koneksi Anda.</div>';
         }
     }
 
@@ -284,46 +364,99 @@
 
     function renderHistory() {
         const container = document.getElementById('list-history-container');
-        let filtered = allHistoryData.filter(d => (d.Permintaan+d.Status+d.Store+d.ID_Pengadaan).toLowerCase().includes(currentSearchTerm));
-        if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-4">Tidak ada data.</div>'; document.getElementById('btn-load-more').classList.add('hidden'); return; }
+        let filtered = allHistoryData.filter(d => (d.Permintaan+d.Status+d.Store+d.Deskripsi_Detail).toLowerCase().includes(currentSearchTerm));
+        if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-4 text-gray-500">Tidak ada data.</div>'; document.getElementById('btn-load-more').classList.add('hidden'); return; }
 
-        let toShow = filtered.slice(0, displayedCount);
-        container.innerHTML = '';
+        let toShow = filtered.slice(0, displayedCount); container.innerHTML = '';
+        
         toShow.forEach(d => {
-            let badge = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
-            
-            // ADMIN UI: Note Pengiriman
-            let adminActions = '';
-            if(isAdminView) {
+            let badgeStyle = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+            if(d.Status === 'Request Cancel') badgeStyle = 'bg-orange-100 text-orange-700';
+
+            // LOGIC WAKTU EDIT & CANCEL (STAFF)
+            let btnAction = '';
+            if(!isAdminView) {
+                let reqTime = new Date(d.Waktu).getTime();
+                let timeDiffMin = (new Date().getTime() - reqTime) / 60000;
+                
                 if(d.Status === 'Pending') {
-                    adminActions = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', 'Approved')" class="bg-green-500 text-white p-2 rounded w-1/2 font-bold text-xs">Approve</button><button onclick="actionStatus('${d.ID_Pengadaan}', 'Rejected')" class="bg-red-500 text-white p-2 rounded w-1/2 font-bold text-xs">Reject</button></div>`;
-                } else if(d.Status === 'Approved') {
-                    let resiState = d.Resi_Pengiriman ? 'Edit Resi / Pengiriman' : '🔴 Input Info Pengiriman';
-                    adminActions = `<button onclick="actionResi('${d.ID_Pengadaan}', '${d.Resi_Pengiriman||''}')" class="mt-3 bg-blue-500 text-white w-full py-2 rounded text-xs font-bold"><i class="fa-solid fa-truck"></i> ${resiState}</button>`;
+                    if(timeDiffMin <= 10) {
+                        btnAction = `<button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="mt-2 text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-xl w-full font-bold shadow-sm">Edit Pengajuan (Maks 10 Mnt)</button>`;
+                    } else {
+                        btnAction = `<button onclick="requestCancel('${d.ID_Pengadaan}')" class="mt-2 text-xs bg-red-50 text-red-600 border border-red-100 px-3 py-2 rounded-xl w-full font-bold shadow-sm">Batalkan Pengajuan</button>`;
+                    }
                 }
             }
 
-            let fotos = `<div onclick="openGDrivePhoto('${d.Foto_1}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_2) fotos += `<div onclick="openGDrivePhoto('${d.Foto_2}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_3) fotos += `<div onclick="openGDrivePhoto('${d.Foto_3}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            // ADMIN LOGIC
+            if(isAdminView) {
+                if(d.Status === 'Pending' || d.Status === 'Request Cancel') {
+                    let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : 'Approve';
+                    let rejText = d.Status === 'Request Cancel' ? 'Setuju Cancel' : 'Reject';
+                    let rejVal = d.Status === 'Request Cancel' ? 'Canceled' : 'Rejected';
+                    let accVal = d.Status === 'Request Cancel' ? 'Pending' : 'Approved'; // Tolak cancel = balik ke pending
+                    
+                    btnAction = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', '${accVal}')" class="bg-green-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${accText}</button><button onclick="actionStatus('${d.ID_Pengadaan}', '${rejVal}')" class="bg-red-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${rejText}</button></div>`;
+                } else if(d.Status === 'Approved') {
+                    let resiState = d.Resi_Pengiriman ? 'Edit Resi Pengiriman' : '🔴 Input Info Pengiriman';
+                    btnAction = `<button onclick="actionResi('${d.ID_Pengadaan}', '${d.Resi_Pengiriman||''}')" class="mt-3 bg-blue-500 text-white w-full py-2 rounded-xl text-xs font-bold shadow-sm"><i class="fa-solid fa-truck"></i> ${resiState}</button>`;
+                }
+            }
+
+            let fotos = `<div onclick="previewImgDirect('${d.Foto_1}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_2) fotos += `<div onclick="previewImgDirect('${d.Foto_2}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_3) fotos += `<div onclick="previewImgDirect('${d.Foto_3}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
 
             container.innerHTML += `
                 <div class="ios-card relative mb-3">
-                    <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded ${badge}">${d.Status}</span>
+                    <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md ${badgeStyle}">${d.Status}</span>
                     <h3 class="font-bold text-sm pr-16">${d.Permintaan}</h3>
                     <p class="text-[10px] text-gray-500 mb-2">${new Date(d.Waktu).toLocaleString('id-ID')}</p>
-                    ${isAdminView ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store}</p>` : ''}
+                    ${isAdminView ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store} (${d.Nama})</p>` : ''}
                     
-                    <div class="bg-gray-50 border p-2 rounded mb-2 text-xs">${d.Deskripsi_Detail}</div>
+                    <div class="bg-gray-50 border p-2.5 rounded-lg mb-2 text-xs text-gray-700">${d.Deskripsi_Detail}</div>
                     
-                    <div class="flex gap-2">${fotos}</div>
+                    <div class="flex gap-2 mb-1">${fotos}</div>
                     
                     ${d.Keterangan_Admin ? `<div class="mt-2 text-[11px] text-red-600 font-bold">Catatan: ${d.Keterangan_Admin}</div>` : ''}
-                    ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded font-bold"><i class="fa-solid fa-truck-fast"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
-                    ${adminActions}
+                    ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded-lg font-bold"><i class="fa-solid fa-truck-fast"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
+                    ${btnAction}
                 </div>`;
         });
         document.getElementById('btn-load-more').className = filtered.length > displayedCount ? 'ios-btn bg-gray-200 text-gray-700 mt-4' : 'hidden';
+    }
+
+    async function requestCancel(id) {
+        Swal.fire({
+            title: 'Yakin batalkan?',
+            text: 'Admin harus menyetujui pembatalan ini.',
+            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
+                const res = await apiCall({ action: 'request_cancel', id: id, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
+                if (res.status === 'success') { Swal.fire('Terkirim', 'Request cancel diajukan.', 'success'); fetchHistory(); }
+            }
+        });
+    }
+
+    function startEdit(id, perm, desk) {
+        switchTab('form-pengadaan');
+        document.getElementById('edit-id-pengadaan').value = id;
+        document.getElementById('item-input').value = perm;
+        document.getElementById('deskripsi').value = desk;
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Perubahan';
+        Swal.fire({icon: 'info', title: 'Edit Mode', text: 'Sisa waktu Anda 10 menit.', timer:2000});
+    }
+
+    function cancelEdit() {
+        document.getElementById('edit-id-pengadaan').value = "";
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+        document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan';
+        document.getElementById('form-submit').reset();
+        [1,2,3].forEach(i => removePhoto(i));
+        loadDraft(); // Kembalikan apa yg ada di draft sblm klik edit
     }
 
     async function actionStatus(id, status) {
@@ -336,7 +469,7 @@
     }
 
     async function actionResi(id, curResi) {
-        const { value: resi } = await Swal.fire({ title: 'Info Pengiriman', input: 'text', inputValue: curResi, inputPlaceholder: 'Cth: Dikirim via JNE (Resi: 123) / Driver Budi', showCancelButton: true });
+        const { value: resi } = await Swal.fire({ title: 'Info Pengiriman', input: 'text', inputValue: curResi, inputPlaceholder: 'Cth: JNE - 12345', showCancelButton: true });
         if (resi !== undefined) {
             Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
             const res = await apiCall({ action: 'update_resi', id, resi, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
@@ -344,30 +477,30 @@
         }
     }
 
-    /* FUNGSI COMPRESS & UTILS (Tetap sama seperti sebelumnya) */
+    /* COMPRESS UTILS */
     function handlePhoto(input, num) {
         if(input.files[0]) {
             document.getElementById('preview' + num).src = URL.createObjectURL(input.files[0]);
             document.getElementById('preview' + num).classList.remove('hidden');
             document.getElementById('btn-hapus-' + num).classList.remove('hidden');
-            if(num === 1) document.getElementById('cam1').required = false; 
+            saveDraft(); // Simpan draft tiap ganti foto
         }
     }
     function removePhoto(num) {
         document.getElementById('cam' + num).value = ''; document.getElementById('gal' + num).value = '';
         document.getElementById('preview' + num).src = ''; document.getElementById('preview' + num).classList.add('hidden');
         document.getElementById('btn-hapus-' + num).classList.add('hidden');
-        if(num === 1) document.getElementById('cam1').required = true;
+        saveDraft(); // Simpan draft saat foto dihapus
     }
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
     }
     function showMasterList() {
-        let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b" onclick="selectItem('${item}')">${item}</button>`).join('');
+        let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b active:bg-gray-100" onclick="selectItem('${item}')">${item}</button>`).join('');
         Swal.fire({ title: 'Pilih Barang', html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`, showConfirmButton: false, showCloseButton: true });
     }
-    function selectItem(val) { document.getElementById('item-input').value = val; Swal.close(); }
+    function selectItem(val) { document.getElementById('item-input').value = val; saveDraft(); Swal.close(); }
     
     function compressImage(c, g) {
         let file = c.files[0] || g.files[0];
