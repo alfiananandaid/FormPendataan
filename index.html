@@ -5,13 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pengadaan PWA</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007AFF">
+    <meta name="theme-color" content="#F2F2F7">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #F2F2F7; -webkit-tap-highlight-color: transparent;}
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #E5E5EA; -webkit-tap-highlight-color: transparent; }
+        
+        /* Container Khusus agar tampilan di Desktop/PC elegan (seperti emulator HP) */
+        .app-container { background-color: #F2F2F7; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden;}
+        
         .ios-card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 20px; border: 1px solid #f0f0f0;}
         .ios-input { background: #F7F7F9; border: 1px solid #E5E5EA; border-radius: 12px; padding: 12px 14px; width: 100%; outline: none; transition: 0.2s;}
         .ios-input:focus { border-color: #007AFF; background: white;}
@@ -22,8 +26,8 @@
         .photo-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10; }
         .btn-remove-photo { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 26px; height: 26px; z-index: 20; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;}
         
-        .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; }
-        .nav-item { color: #8E8E93; transition: 0.2s; }
+        .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; margin-top: auto; position: sticky; bottom: 0; z-index: 40;}
+        .nav-item { color: #8E8E93; transition: 0.2s; width: 33.33%; padding: 10px 0;}
         .nav-item.active { color: #007AFF; font-weight: 600; }
         .hidden { display: none !important; }
         
@@ -31,17 +35,20 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-gray-800 pb-20">
+<body class="text-gray-800">
+
+<!-- WRAPPER UNTUK TAMPILAN PC/DESKTOP -->
+<div class="app-container">
 
     <!-- SPLASH SCREEN -->
-    <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white">
+    <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white sm:absolute">
         <i class="fa-solid fa-box-open text-6xl mb-4 animate-bounce"></i>
         <h2 class="text-xl font-bold">Memuat Sistem...</h2>
     </div>
 
     <!-- LOGIN -->
-    <div id="login-view" class="hidden min-h-screen items-center justify-center p-4">
-        <div class="ios-card w-full max-w-sm">
+    <div id="login-view" class="hidden flex-1 items-center justify-center p-4">
+        <div class="ios-card w-full">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl"><i class="fa-solid fa-box"></i></div>
                 <h2 class="text-2xl font-bold">Pengadaan Apps</h2>
@@ -55,7 +62,9 @@
     </div>
 
     <!-- DASHBOARD -->
-    <div id="dashboard-view" class="hidden">
+    <div id="dashboard-view" class="hidden flex-1 flex flex-col">
+        
+        <!-- Header -->
         <div class="bg-white px-6 pt-10 pb-4 shadow-sm sticky top-0 z-30 rounded-b-[20px] flex justify-between items-center">
             <div>
                 <h1 id="page-title" class="text-2xl font-bold">Form Pengajuan</h1>
@@ -67,8 +76,9 @@
             </button>
         </div>
 
-        <div class="p-4 max-w-lg mx-auto">
-            <!-- FORM PENGADAAN -->
+        <div class="p-4 w-full mx-auto flex-1 pb-24">
+            
+            <!-- FORM PENGADAAN (KHUSUS STAFF) -->
             <div id="page-form-pengadaan" class="page-content ios-card">
                 <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
                     <input type="hidden" id="edit-id-pengadaan" value="">
@@ -112,42 +122,58 @@
 
             <!-- HISTORY & ADMIN PAGE -->
             <div id="page-data-pengadaan" class="page-content hidden">
-                <input type="text" id="search-history" class="ios-input mb-4" placeholder="Cari data pengadaan..." oninput="searchData(this.value)">
+                <input type="text" id="search-history" class="ios-input mb-4 shadow-sm" placeholder="🔍 Cari data..." oninput="searchData(this.value)">
                 <div id="list-history-container" class="space-y-4"></div>
                 <button id="btn-load-more" onclick="loadMoreData()" class="ios-btn bg-gray-200 text-gray-700 mt-4 hidden">Tampilkan 10 Lagi</button>
             </div>
         </div>
 
-        <!-- BOTTOM NAV -->
-        <div class="bottom-nav fixed bottom-0 left-0 w-full flex justify-around p-3 pb-6 z-40">
-            <button onclick="switchTab('form-pengadaan')" id="nav-form-pengadaan" class="nav-item active flex flex-col items-center w-1/4">
+        <!-- BOTTOM NAV (DIPERBARUI LOGIC NYA UNTUK ADMIN) -->
+        <div class="bottom-nav flex justify-around shadow-[0_-4px_15px_rgba(0,0,0,0.02)] pb-4 pt-2">
+            
+            <!-- TOMBOL STAFF -->
+            <button onclick="switchTab('form-pengadaan')" id="nav-form-pengadaan" class="nav-item active flex flex-col items-center">
                 <i class="fa-solid fa-pen-to-square text-xl mb-1"></i><span class="text-[10px]">Buat</span>
             </button>
-            <button onclick="switchTab('data-pengadaan')" id="nav-data-pengadaan" class="nav-item flex flex-col items-center w-1/4">
+            <button onclick="switchTab('data-pengadaan')" id="nav-data-pengadaan" class="nav-item flex flex-col items-center">
                 <i class="fa-solid fa-clock-rotate-left text-xl mb-1"></i><span class="text-[10px]">Histori</span>
             </button>
-            <button onclick="switchTab('admin-approval')" id="nav-admin" class="nav-item hidden flex flex-col items-center w-1/4 text-red-500">
-                <i class="fa-solid fa-clipboard-check text-xl mb-1"></i><span class="text-[10px]">Admin</span>
+            
+            <!-- TOMBOL ADMIN (Hanya tampil untuk admin) -->
+            <button onclick="switchTab('admin-approval')" id="nav-admin-approval" class="nav-item hidden flex flex-col items-center text-red-500">
+                <i class="fa-solid fa-clipboard-check text-xl mb-1"></i><span class="text-[10px]">Approval</span>
             </button>
-            <button onclick="logout()" class="nav-item flex flex-col items-center w-1/4">
+            <button onclick="switchTab('admin-history')" id="nav-admin-history" class="nav-item hidden flex flex-col items-center text-blue-500">
+                <i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px]">Histori</span>
+            </button>
+
+            <!-- KELUAR UMUM -->
+            <button onclick="logout()" class="nav-item flex flex-col items-center">
                 <i class="fa-solid fa-power-off text-xl mb-1"></i><span class="text-[10px]">Keluar</span>
             </button>
         </div>
     </div>
 
+</div> <!-- PENUTUP WRAPPER PC -->
+
 <script>
     if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHXvznWJpwPQb5l2DDyV1Xf1ToADR9RjIJ8LSRZKSL65mJqxAm5f3bv4pOyIyG_XCm/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby368Ad4zC3zWOsJJhDOtyPX_MJaoCCLLtYDQr02Eji-IpYLjCGlESvQrR9OW5uMBd9/exec'; 
     let currentUser = null, globalIP = 'Unknown', globalLoc = 'Akses Lokasi Ditolak';
-    let masterBarangList = [], allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false, isSyncing = false;
+    let masterBarangList = [], allHistoryData = [], displayedCount = 10, currentSearchTerm = '', currentTab = 'form-pengadaan', isSyncing = false;
 
     fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>globalIP=d.ip).catch(e=>{});
     navigator.geolocation.getCurrentPosition(p=>globalLoc=`Lat: ${p.coords.latitude.toFixed(5)}, Lng: ${p.coords.longitude.toFixed(5)}`, e=>{});
 
     async function apiCall(data) {
-        try { return await (await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) })).json(); } 
-        catch (err) { return {status: 'error', message: 'Offline'}; }
+        try { 
+            return await (await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) })).json(); 
+        } 
+        catch (err) { 
+            console.error("Fetch Error:", err);
+            return {status: 'error', message: 'Koneksi Terputus atau Diblokir (Cek sw.js)'}; 
+        }
     }
 
     window.onload = async function() {
@@ -181,9 +207,27 @@
         document.getElementById('login-view').classList.add('hidden');
         document.getElementById('login-view').classList.remove('flex');
         document.getElementById('dashboard-view').classList.remove('hidden');
+        document.getElementById('dashboard-view').classList.add('flex');
+        
         document.getElementById('user-store-info').innerHTML = `<i class="fa-solid fa-store text-blue-500"></i> ${currentUser.store}`;
-        if (currentUser.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
-        switchTab('form-pengadaan');
+        
+        // Atur Navigasi berdasarkan Role
+        if (currentUser.role === 'admin') {
+            document.getElementById('nav-form-pengadaan').classList.add('hidden');
+            document.getElementById('nav-data-pengadaan').classList.add('hidden');
+            
+            document.getElementById('nav-admin-approval').classList.remove('hidden');
+            document.getElementById('nav-admin-approval').classList.add('flex');
+            
+            document.getElementById('nav-admin-history').classList.remove('hidden');
+            document.getElementById('nav-admin-history').classList.add('flex');
+            
+            switchTab('admin-approval');
+        } else {
+            document.getElementById('nav-admin-approval').classList.add('hidden');
+            document.getElementById('nav-admin-history').classList.add('hidden');
+            switchTab('form-pengadaan');
+        }
     }
 
     async function login() {
@@ -209,9 +253,9 @@
         const draft = {
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
-            foto1: !document.getElementById('preview1').classList.contains('hidden') && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
-            foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
-            foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : ''
+            foto1: !document.getElementById('preview1').classList.contains('hidden') ? document.getElementById('preview1').src : '',
+            foto2: !document.getElementById('preview2').classList.contains('hidden') ? document.getElementById('preview2').src : '',
+            foto3: !document.getElementById('preview3').classList.contains('hidden') ? document.getElementById('preview3').src : ''
         };
         localStorage.setItem('draft_pengadaan', JSON.stringify(draft));
     }
@@ -222,7 +266,7 @@
             if(draft.permintaan) document.getElementById('item-input').value = draft.permintaan;
             if(draft.deskripsi) document.getElementById('deskripsi').value = draft.deskripsi;
             for(let i=1; i<=3; i++) {
-                if(draft['foto'+i]) {
+                if(draft['foto'+i] && draft['foto'+i].startsWith('data:')) {
                     document.getElementById('preview'+i).src = draft['foto'+i];
                     document.getElementById('preview'+i).classList.remove('hidden');
                     document.getElementById('btn-hapus-'+i).classList.remove('hidden');
@@ -234,12 +278,10 @@
     async function pilihSumberFoto(num) {
         if(!document.getElementById('preview'+num).classList.contains('hidden')) return;
         const res = await Swal.fire({
-            title: 'Pilih Sumber Foto',
-            showDenyButton: true, showCancelButton: true,
+            title: 'Pilih Sumber Foto', showDenyButton: true, showCancelButton: true,
             confirmButtonText: '<i class="fa-solid fa-camera mr-2"></i> Kamera',
             denyButtonText: '<i class="fa-solid fa-images mr-2"></i> Galeri',
-            cancelButtonText: 'Batal',
-            confirmButtonColor: '#007AFF', denyButtonColor: '#34C759',
+            cancelButtonText: 'Batal', confirmButtonColor: '#007AFF', denyButtonColor: '#34C759',
             customClass: { actions: 'flex-col gap-2', confirmButton: 'w-full', denyButton: 'w-full', cancelButton: 'w-full' }
         });
         if(res.isConfirmed) document.getElementById('cam'+num).click();
@@ -258,16 +300,10 @@
                     if (w > 1000) { h = Math.round((h * 1000) / w); w = 1000; }
                     canvas.width = w; canvas.height = h; 
                     const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-                    
-                    ctx.font = "bold 22px Arial"; 
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; 
-                    ctx.shadowColor = "rgba(0,0,0,0.8)"; 
-                    ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    
-                    const timeStr = new Date().toLocaleString('id-ID');
-                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nJam: ${timeStr}\nLokasi: ${globalLoc}`;
-                    const lines = txt.split('\n'); 
-                    let y = h - (lines.length * 30) - 15;
+                    ctx.font = "bold 22px Arial"; ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; 
+                    ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nJam: ${new Date().toLocaleString('id-ID')}\nLokasi: ${globalLoc}`;
+                    const lines = txt.split('\n'); let y = h - (lines.length * 30) - 15;
                     lines.forEach(line => { ctx.fillText(line, 20, y); y += 30; });
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
@@ -282,8 +318,7 @@
             document.getElementById('preview' + num).src = compressedBase64;
             document.getElementById('preview' + num).classList.remove('hidden');
             document.getElementById('btn-hapus-' + num).classList.remove('hidden');
-            saveDraft(); 
-            Swal.close(); 
+            saveDraft(); Swal.close(); 
         }
     }
 
@@ -298,12 +333,9 @@
         let directUrl = url;
         let fileId = url.match(/[-\w]{25,}/);
         if(fileId && fileId[0]) directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`; 
-        
         Swal.fire({
-            imageUrl: directUrl, imageAlt: 'Foto',
-            showConfirmButton: false, showCloseButton: true,
-            customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' },
-            backdrop: `rgba(0,0,0,0.85)`
+            imageUrl: directUrl, imageAlt: 'Foto', showConfirmButton: false, showCloseButton: true,
+            customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' }, backdrop: `rgba(0,0,0,0.85)`
         });
     }
 
@@ -316,15 +348,13 @@
     async function processForm() {
         const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
         const isFoto1Kosong = document.getElementById('preview1').classList.contains('hidden');
-
         if(!isEdit && isFoto1Kosong) return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
 
         const p = {
             action: isEdit ? 'edit_pengadaan' : 'submit_pengadaan', 
             local_id: 'REQ-' + Date.now(), id_pengadaan: document.getElementById('edit-id-pengadaan').value,
             nik: currentUser.nik, nama: currentUser.nama, store: currentUser.store,
-            permintaan: document.getElementById('item-input').value,
-            deskripsi: document.getElementById('deskripsi').value,
+            permintaan: document.getElementById('item-input').value, deskripsi: document.getElementById('deskripsi').value,
             foto1: !isFoto1Kosong && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
             foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
             foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : '',
@@ -334,49 +364,59 @@
         let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         queue.push(p); localStorage.setItem('offlineQueue', JSON.stringify(queue));
         
-        document.getElementById('form-submit').reset();
-        [1,2,3].forEach(i => removePhoto(i));
-        localStorage.removeItem('draft_pengadaan'); 
-        cancelEdit();
-        
+        document.getElementById('form-submit').reset(); [1,2,3].forEach(i => removePhoto(i));
+        localStorage.removeItem('draft_pengadaan'); cancelEdit();
         updateSyncBadge();
-        Swal.fire({icon: 'success', title: 'Data Diajukan', text: 'Data disimpan di antrean & akan disinkronkan.', timer: 2000, showConfirmButton: false});
-        syncOffline(); 
-        switchTab('data-pengadaan');
+        Swal.fire({icon: 'success', title: 'Data Diajukan', text: 'Data disimpan & akan disinkronkan.', timer: 2000, showConfirmButton: false});
+        syncOffline(); switchTab('data-pengadaan');
     }
 
     async function syncOffline() {
         if(isSyncing) return;
         let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         if(queue.length === 0) return;
-
-        isSyncing = true;
-        document.getElementById('sync-icon').classList.add('spin');
+        isSyncing = true; document.getElementById('sync-icon').classList.add('spin');
 
         while(queue.length > 0) {
             const item = queue[0];
             const res = await apiCall(item);
             if(res.status === 'success') {
-                queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue));
-                updateSyncBadge();
+                queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue)); updateSyncBadge();
             } else {
-                if(res.message && res.message.includes('Pending')) Swal.fire('Gagal', res.message, 'error');
-                break; 
+                if(res.message && res.message.includes('Pending')) Swal.fire('Gagal', res.message, 'error'); break; 
             }
         }
-        document.getElementById('sync-icon').classList.remove('spin');
-        isSyncing = false;
-        if(!document.getElementById('page-data-pengadaan').classList.contains('hidden')) fetchHistory();
+        document.getElementById('sync-icon').classList.remove('spin'); isSyncing = false;
+        if(currentTab !== 'form-pengadaan') fetchHistory();
     }
 
     function switchTab(tabId) {
+        currentTab = tabId;
+        
+        // Sembunyikan semua halaman & hapus status aktif di nav
         document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        isAdminView = tabId === 'admin-approval';
-        document.getElementById(`page-${tabId === 'admin-approval' ? 'data-pengadaan' : tabId}`).classList.remove('hidden');
-        document.getElementById(`nav-${tabId}`).classList.add('active');
-        document.getElementById('page-title').innerText = tabId === 'admin-approval' ? "Admin Panel" : (tabId === 'data-pengadaan' ? "Histori Pengajuan" : "Form Pengajuan");
-        if (tabId === 'data-pengadaan' || isAdminView) fetchHistory();
+        
+        // Tentukan Div Halaman mana yang dibuka
+        let pageIdToShow = (tabId === 'admin-approval' || tabId === 'admin-history' || tabId === 'data-pengadaan') ? 'data-pengadaan' : tabId;
+        document.getElementById('page-' + pageIdToShow).classList.remove('hidden');
+        
+        // Aktifkan Nav yang diklik
+        let navBtn = document.getElementById('nav-' + tabId);
+        if(navBtn) navBtn.classList.add('active');
+
+        // Ganti Judul
+        if (tabId === 'admin-approval') document.getElementById('page-title').innerText = "Menunggu Approval";
+        else if (tabId === 'admin-history') document.getElementById('page-title').innerText = "Semua Histori";
+        else if (tabId === 'data-pengadaan') document.getElementById('page-title').innerText = "Histori Pengajuan";
+        else document.getElementById('page-title').innerText = "Form Pengajuan";
+
+        // Ambil data jika halaman tipe histori
+        if (pageIdToShow === 'data-pengadaan') {
+            document.getElementById('search-history').value = '';
+            currentSearchTerm = '';
+            fetchHistory();
+        }
     }
 
     async function fetchHistory() {
@@ -384,10 +424,10 @@
         container.innerHTML = '<div class="text-center p-10"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>Sinkronisasi Data...</div>';
         const res = await apiCall({ action: 'get_data' });
         if (res.status === 'success') {
-            allHistoryData = isAdminView ? res.data : res.data.filter(d => d.Store === currentUser.store);
+            allHistoryData = res.data;
             displayedCount = 10; renderHistory();
         } else {
-            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Anda sedang Offline.</div>';
+            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Koneksi Terputus. Cek Jaringan/SW.</div>';
         }
     }
 
@@ -396,7 +436,22 @@
 
     function renderHistory() {
         const container = document.getElementById('list-history-container');
-        let filtered = allHistoryData.filter(d => (d.Permintaan+d.Status+d.Store+d.Deskripsi_Detail).toLowerCase().includes(currentSearchTerm));
+        let filtered = allHistoryData;
+
+        // Filter berdasarkan peran & Tab
+        if (currentUser.role === 'admin') {
+            if (currentTab === 'admin-approval') {
+                filtered = filtered.filter(d => d.Status === 'Pending' || d.Status === 'Request Cancel');
+            } 
+            // jika admin-history, tampilkan semua (tidak perlu di filter status)
+        } else {
+            // Staff hanya lihat data dari tokonya sendiri
+            filtered = filtered.filter(d => d.Store === currentUser.store);
+        }
+
+        // Filter dari kotak pencarian
+        filtered = filtered.filter(d => (d.Permintaan+d.Status+d.Store+d.Deskripsi_Detail).toLowerCase().includes(currentSearchTerm));
+        
         if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-4 text-gray-500">Tidak ada data.</div>'; document.getElementById('btn-load-more').classList.add('hidden'); return; }
 
         let toShow = filtered.slice(0, displayedCount); container.innerHTML = '';
@@ -406,7 +461,9 @@
             if(d.Status === 'Request Cancel') badgeStyle = 'bg-orange-100 text-orange-700';
 
             let btnAction = '';
-            if(!isAdminView) {
+            
+            // LOGIKA TOMBOL STAFF
+            if(currentUser.role !== 'admin') {
                 if(d.Status === 'Pending') {
                     btnAction = `
                     <div class="flex gap-2 mt-3">
@@ -414,15 +471,14 @@
                         <button onclick="requestCancel('${d.ID_Pengadaan}')" class="bg-red-50 text-red-600 border border-red-100 px-3 py-2 rounded-xl w-1/2 font-bold text-xs shadow-sm"><i class="fa-solid fa-xmark mr-1"></i> Batal</button>
                     </div>`;
                 }
-            }
-
-            if(isAdminView) {
-                if(d.Status === 'Pending' || d.Status === 'Request Cancel') {
+            } 
+            // LOGIKA TOMBOL ADMIN
+            else {
+                if(currentTab === 'admin-approval' && (d.Status === 'Pending' || d.Status === 'Request Cancel')) {
                     let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : 'Approve';
                     let rejText = d.Status === 'Request Cancel' ? 'Setuju Cancel' : 'Reject';
                     let rejVal = d.Status === 'Request Cancel' ? 'Canceled' : 'Rejected';
                     let accVal = d.Status === 'Request Cancel' ? 'Pending' : 'Approved'; 
-                    
                     btnAction = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', '${accVal}')" class="bg-green-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${accText}</button><button onclick="actionStatus('${d.ID_Pengadaan}', '${rejVal}')" class="bg-red-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${rejText}</button></div>`;
                 } else if(d.Status === 'Approved') {
                     let resiState = d.Resi_Pengiriman ? 'Edit Resi Pengiriman' : '🔴 Input Info Pengiriman';
@@ -439,12 +495,9 @@
                     <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md ${badgeStyle}">${d.Status}</span>
                     <h3 class="font-bold text-sm pr-16">${d.Permintaan}</h3>
                     <p class="text-[10px] text-gray-500 mb-2">${new Date(d.Waktu).toLocaleString('id-ID')}</p>
-                    ${isAdminView ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store} (${d.Nama})</p>` : ''}
-                    
+                    ${currentUser.role === 'admin' ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store} (${d.Nama})</p>` : ''}
                     <div class="bg-gray-50 border p-2.5 rounded-lg mb-2 text-xs text-gray-700">${d.Deskripsi_Detail}</div>
-                    
                     <div class="flex gap-2 mb-1">${fotos}</div>
-                    
                     ${d.Keterangan_Admin ? `<div class="mt-2 text-[11px] text-red-600 font-bold">Catatan: ${d.Keterangan_Admin}</div>` : ''}
                     ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded-lg font-bold"><i class="fa-solid fa-truck-fast"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
                     ${btnAction}
@@ -454,9 +507,8 @@
     }
 
     async function requestCancel(id) {
-        Swal.fire({
-            title: 'Yakin batalkan?', text: 'Admin harus menyetujui pembatalan ini.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan'
-        }).then(async (result) => {
+        Swal.fire({ title: 'Yakin batalkan?', text: 'Admin harus menyetujui pembatalan ini.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan' })
+        .then(async (result) => {
             if (result.isConfirmed) {
                 Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
                 const res = await apiCall({ action: 'request_cancel', id: id, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
@@ -479,8 +531,7 @@
         document.getElementById('edit-id-pengadaan').value = "";
         document.getElementById('btn-cancel-edit').classList.add('hidden');
         document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan';
-        document.getElementById('form-submit').reset();
-        [1,2,3].forEach(i => removePhoto(i));
+        document.getElementById('form-submit').reset(); [1,2,3].forEach(i => removePhoto(i));
         loadDraft(); 
     }
 
@@ -502,7 +553,6 @@
         }
     }
 
-    // MASTER LIST DATA DENGAN FITUR SYNC BARU & HAPUS LOADING MUTER
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
@@ -512,93 +562,51 @@
         let term = val.toLowerCase();
         let items = document.querySelectorAll('.kategori-item');
         items.forEach(el => {
-            if(el.getAttribute('data-nama').includes(term)) {
-                el.style.display = 'flex';
-            } else {
-                el.style.display = 'none';
-            }
+            el.style.display = el.getAttribute('data-nama').includes(term) ? 'flex' : 'none';
         });
     }
 
-    // Fungsi khusus saat tombol Sync di dalam Pop Up Kategori ditekan
     window.syncKategoriData = async function() {
         Swal.fire({ title: 'Menyinkronkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        
-        // Tarik data Master Barang baru
         const resInit = await apiCall({action: 'init_data'});
         if(resInit.status === 'success') masterBarangList = resInit.master_barang;
-        
-        // Tarik data Histori baru (untuk validasi badge "Pernah/Baru")
         const resHist = await apiCall({ action: 'get_data' });
         if (resHist.status === 'success') allHistoryData = resHist.data;
-        
-        Swal.close();
-        
-        // Buka kembali list dengan data yang sudah di-refresh
-        showMasterList();
+        Swal.close(); showMasterList();
     }
 
     async function showMasterList() {
-        // HAPUS LOADING DISINI AGAR TIDAK NGE-BUG SAAT DATA SUDAH TAMPIL
-        
         let historyToCheck = allHistoryData;
-        
-        // Ambil data jika kosong (dilakukan transparan di background agar popup tidak nge-bug)
         if (historyToCheck.length === 0) {
             const res = await apiCall({ action: 'get_data' });
-            if (res.status === 'success') {
-                allHistoryData = res.data;
-                historyToCheck = res.data;
-            }
+            if (res.status === 'success') { allHistoryData = res.data; historyToCheck = res.data; }
         }
-
         let storeHistory = historyToCheck.filter(d => d.Store === currentUser.store);
-        let historyMap = {};
-        storeHistory.forEach(d => {
-            if(!historyMap[d.Permintaan]) {
-                historyMap[d.Permintaan] = d;
-            }
-        });
+        let historyMap = {}; storeHistory.forEach(d => { if(!historyMap[d.Permintaan]) historyMap[d.Permintaan] = d; });
 
         let htmlListItems = masterBarangList.map(item => {
             let lastReq = historyMap[item];
-            let badge = '';
-            let dateInfo = '';
+            let badge = ''; let dateInfo = '';
             
             if(lastReq) {
                 let statusColor = lastReq.Status === 'Approved' ? 'text-green-600' : (lastReq.Status === 'Pending' ? 'text-yellow-600' : 'text-red-600');
                 let tgl = new Date(lastReq.Waktu).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
-                
                 badge = `<span class="text-[9px] bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 font-bold whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Pernah</span>`;
                 dateInfo = `<div class="text-[10px] text-gray-500 mt-1">Diinput Tanggal ${tgl} <span class="font-bold ${statusColor}">(${lastReq.Status})</span></div>`;
             } else {
                 badge = `<span class="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 font-bold whitespace-nowrap"><i class="fa-solid fa-star mr-1"></i>Baru</span>`;
             }
-            
             return `<button class="kategori-item w-full text-left p-3 border-b active:bg-gray-100 flex justify-between items-start gap-2" onclick="selectItem('${item}')" data-nama="${item.toLowerCase()}">
-                <div>
-                    <span class="font-bold text-gray-700 text-sm">${item}</span>
-                    ${dateInfo}
-                </div>
-                ${badge}
+                <div><span class="font-bold text-gray-700 text-sm">${item}</span>${dateInfo}</div>${badge}
             </button>`;
         }).join('');
         
-        // MENAMBAHKAN TOMBOL SYNC DI SAMPING KOTAK PENCARIAN
-        let searchInput = `
-        <div class="flex gap-2 mb-3">
+        let searchInput = `<div class="flex gap-2 mb-3">
             <input type="text" id="search-kategori" class="flex-1 bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">
-            <button onclick="syncKategoriData()" class="bg-blue-50 text-blue-600 border border-blue-200 rounded-xl px-4 flex items-center justify-center transition active:bg-blue-100 shadow-sm">
-                <i class="fa-solid fa-rotate"></i>
-            </button>
+            <button onclick="syncKategoriData()" class="bg-blue-50 text-blue-600 border border-blue-200 rounded-xl px-4 flex items-center justify-center transition active:bg-blue-100 shadow-sm"><i class="fa-solid fa-rotate"></i></button>
         </div>`;
 
-        Swal.fire({ 
-            title: 'Pilih Kategori Barang', 
-            html: searchInput + `<div id="kategori-container" class="max-h-60 overflow-y-auto text-sm text-left border border-gray-100 rounded-xl">${htmlListItems}</div>`, 
-            showConfirmButton: false, 
-            showCloseButton: true 
-        });
+        Swal.fire({ title: 'Pilih Kategori Barang', html: searchInput + `<div id="kategori-container" class="max-h-60 overflow-y-auto text-sm text-left border border-gray-100 rounded-xl">${htmlListItems}</div>`, showConfirmButton: false, showCloseButton: true });
     }
     
     function selectItem(val) { document.getElementById('item-input').value = val; saveDraft(); Swal.close(); }
