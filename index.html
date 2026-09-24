@@ -27,7 +27,6 @@
         .nav-item.active { color: #007AFF; font-weight: 600; }
         .hidden { display: none !important; }
         
-        /* Animasi Refresh Sync */
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
@@ -99,7 +98,6 @@
                                             <img id="preview${i}" class="photo-preview hidden">
                                             <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-[10px]"></i></button>
                                         </div>
-                                        <!-- INPUT BERADA DI LUAR PHOTO-BOX AGAR TIDAK TERJADI DOUBLE CLICK -->
                                         <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
                                         <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
                                     `);
@@ -140,21 +138,19 @@
 <script>
     if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsd4efk-ieZacyAwAoczb6lkJCdkiphmyOQB3jwIgbxN3w8palmGXB98uRwJwgU4FB/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwsIUTR6V6_FaCJmoCInfIvqASz3IEasSR2fsIELpcEd7bd0Ie2EgbUG1LWqC6acyKX/exec'; 
     let currentUser = null, globalIP = 'Unknown', globalLoc = 'Akses Lokasi Ditolak';
     let masterBarangList = [], allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false, isSyncing = false;
 
     // Trackers
     fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>globalIP=d.ip).catch(e=>{});
-    navigator.geolocation.getCurrentPosition(p=>globalLoc=`${p.coords.latitude}, ${p.coords.longitude}`, e=>{});
+    navigator.geolocation.getCurrentPosition(p=>globalLoc=`Lat: ${p.coords.latitude.toFixed(5)}, Lng: ${p.coords.longitude.toFixed(5)}`, e=>{});
 
-    // API CALLER
     async function apiCall(data) {
         try { return await (await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) })).json(); } 
         catch (err) { return {status: 'error', message: 'Offline'}; }
     }
 
-    // CHECK SESSION ON LOAD
     window.onload = async function() {
         updateSyncBadge();
         initSystemData();
@@ -209,10 +205,9 @@
         location.reload(); 
     }
 
-    // AUTOSAVE DRAFT FORM & FOTO (Bertahan Meski di-Refresh)
+    // DRAFT
     function saveDraft() {
-        if(document.getElementById('edit-id-pengadaan').value !== "") return; // Jangan save draft saat lagi mode edit
-        
+        if(document.getElementById('edit-id-pengadaan').value !== "") return; 
         const draft = {
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
@@ -238,9 +233,8 @@
         }
     }
 
-    // PILIH KAMERA ATAU GALERI LEWAT POPUP (Otomatis Tutup)
+    // POPUP PILIHAN FOTO
     async function pilihSumberFoto(num) {
-        // Jika sedang ada gambar, abaikan klik (harus hapus via X dulu)
         if(!document.getElementById('preview'+num).classList.contains('hidden')) return;
         
         const res = await Swal.fire({
@@ -253,14 +247,11 @@
             customClass: { actions: 'flex-col gap-2', confirmButton: 'w-full', denyButton: 'w-full', cancelButton: 'w-full' }
         });
         
-        if(res.isConfirmed) {
-            document.getElementById('cam'+num).click();
-        } else if(res.isDenied) {
-            document.getElementById('gal'+num).click();
-        }
+        if(res.isConfirmed) document.getElementById('cam'+num).click();
+        else if(res.isDenied) document.getElementById('gal'+num).click();
     }
 
-    // PROSES GAMBAR SECARA INSTANT SAAT DIPILIH
+    // KOMPRESI & WATERMARK (User, Store, Jam, Lokasi)
     async function processImageToWatermark(file) {
         return new Promise((resolve) => {
             if (!file) return resolve("");
@@ -270,14 +261,23 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas'); 
                     let w = img.width, h = img.height;
-                    if (w > 800) { h = Math.round((h * 800) / w); w = 800; }
+                    // Max width 1000px agar font lebih proporsional dan gambar bagus
+                    if (w > 1000) { h = Math.round((h * 1000) / w); w = 1000; }
                     canvas.width = w; canvas.height = h; 
                     const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
                     
-                    ctx.font = "bold 20px Arial"; ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 4;
-                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nTime: ${new Date().toLocaleString('id-ID')}`;
-                    const lines = txt.split('\n'); let y = h - (lines.length * 25) - 10;
-                    lines.forEach(line => { ctx.fillText(line, 15, y); y += 25; });
+                    ctx.font = "bold 22px Arial"; 
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; 
+                    ctx.shadowColor = "rgba(0,0,0,0.8)"; 
+                    ctx.shadowBlur = 4;
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                    
+                    const timeStr = new Date().toLocaleString('id-ID');
+                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nJam: ${timeStr}\nLokasi: ${globalLoc}`;
+                    const lines = txt.split('\n'); 
+                    let y = h - (lines.length * 30) - 15;
+                    lines.forEach(line => { ctx.fillText(line, 20, y); y += 30; });
                     
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
@@ -288,16 +288,14 @@
     async function handlePhoto(input, num) {
         if(input.files[0]) {
             Swal.fire({title: 'Memproses Foto...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
-            
-            // Kompresi dan Watermark seketika!
             const compressedBase64 = await processImageToWatermark(input.files[0]);
             
             document.getElementById('preview' + num).src = compressedBase64;
             document.getElementById('preview' + num).classList.remove('hidden');
             document.getElementById('btn-hapus-' + num).classList.remove('hidden');
             
-            saveDraft(); // Amankan di Draft
-            Swal.close(); // Tutup popup loading
+            saveDraft(); 
+            Swal.close(); 
         }
     }
 
@@ -310,22 +308,19 @@
         saveDraft(); 
     }
 
-    // PREVIEW FOTO POPUP MELAYANG (Tanpa buka tab baru)
     function previewImgDirect(url) {
         let directUrl = url;
         let fileId = url.match(/[-\w]{25,}/);
-        if(fileId && fileId[0]) {
-            directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`; // Extract via API Thumbnail
-        }
+        if(fileId && fileId[0]) directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`; 
+        
         Swal.fire({
-            imageUrl: directUrl, imageAlt: 'Foto Pengadaan',
+            imageUrl: directUrl, imageAlt: 'Foto',
             showConfirmButton: false, showCloseButton: true,
             customClass: { popup: 'rounded-2xl bg-transparent p-0 m-0 shadow-none' },
             backdrop: `rgba(0,0,0,0.85)`
         });
     }
 
-    // SUBMIT & SYNC DATA
     function updateSyncBadge() {
         const q = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         const badge = document.getElementById('sync-badge');
@@ -336,10 +331,7 @@
         const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
         const isFoto1Kosong = document.getElementById('preview1').classList.contains('hidden');
 
-        // Validasi Foto Wajib
-        if(!isEdit && isFoto1Kosong) {
-            return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
-        }
+        if(!isEdit && isFoto1Kosong) return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
 
         const p = {
             action: isEdit ? 'edit_pengadaan' : 'submit_pengadaan', 
@@ -348,7 +340,6 @@
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
             
-            // Foto Diambil Langsung dari Src karena sudah berupa Base64 (Sangat Cepat!)
             foto1: !isFoto1Kosong && document.getElementById('preview1').src.startsWith('data:') ? document.getElementById('preview1').src : '',
             foto2: !document.getElementById('preview2').classList.contains('hidden') && document.getElementById('preview2').src.startsWith('data:') ? document.getElementById('preview2').src : '',
             foto3: !document.getElementById('preview3').classList.contains('hidden') && document.getElementById('preview3').src.startsWith('data:') ? document.getElementById('preview3').src : '',
@@ -358,10 +349,9 @@
         let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         queue.push(p); localStorage.setItem('offlineQueue', JSON.stringify(queue));
         
-        // Reset Bersih
         document.getElementById('form-submit').reset();
         [1,2,3].forEach(i => removePhoto(i));
-        localStorage.removeItem('draft_pengadaan'); // Kosongkan draft setelah submit
+        localStorage.removeItem('draft_pengadaan'); 
         cancelEdit();
         
         updateSyncBadge();
@@ -386,7 +376,7 @@
                 updateSyncBadge();
             } else {
                 if(res.message && res.message.includes('habis')) Swal.fire('Gagal', res.message, 'error');
-                break; // Stop jika error/offline
+                break; 
             }
         }
         document.getElementById('sync-icon').classList.remove('spin');
@@ -394,7 +384,6 @@
         if(!document.getElementById('page-data-pengadaan').classList.contains('hidden')) fetchHistory();
     }
 
-    // TAMPILAN MENU & HISTORY
     function switchTab(tabId) {
         document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -431,7 +420,6 @@
             let badgeStyle = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
             if(d.Status === 'Request Cancel') badgeStyle = 'bg-orange-100 text-orange-700';
 
-            // LOGIC WAKTU EDIT & CANCEL (STAFF)
             let btnAction = '';
             if(!isAdminView) {
                 let timeDiffMin = (new Date().getTime() - new Date(d.Waktu).getTime()) / 60000;
@@ -444,7 +432,6 @@
                 }
             }
 
-            // ADMIN LOGIC
             if(isAdminView) {
                 if(d.Status === 'Pending' || d.Status === 'Request Cancel') {
                     let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : 'Approve';
@@ -531,11 +518,11 @@
         }
     }
 
-    // MASTER LIST DATA 
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
     }
+    
     function showMasterList() {
         let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b active:bg-gray-100" onclick="selectItem('${item}')">${item}</button>`).join('');
         Swal.fire({ title: 'Pilih Barang', html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`, showConfirmButton: false, showCloseButton: true });
