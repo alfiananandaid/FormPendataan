@@ -407,7 +407,6 @@
 
             let btnAction = '';
             if(!isAdminView) {
-                // LOGIKA BARU: Jika status Pending, selalu bisa Edit & Batal (Tidak ada batas 10 menit)
                 if(d.Status === 'Pending') {
                     btnAction = `
                     <div class="flex gap-2 mt-3">
@@ -503,6 +502,7 @@
         }
     }
 
+    // MASTER LIST DATA DENGAN FITUR SYNC BARU & HAPUS LOADING MUTER
     async function initSystemData() {
         const res = await apiCall({action: 'init_data'});
         if(res.status === 'success') masterBarangList = res.master_barang;
@@ -520,10 +520,30 @@
         });
     }
 
+    // Fungsi khusus saat tombol Sync di dalam Pop Up Kategori ditekan
+    window.syncKategoriData = async function() {
+        Swal.fire({ title: 'Menyinkronkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        // Tarik data Master Barang baru
+        const resInit = await apiCall({action: 'init_data'});
+        if(resInit.status === 'success') masterBarangList = resInit.master_barang;
+        
+        // Tarik data Histori baru (untuk validasi badge "Pernah/Baru")
+        const resHist = await apiCall({ action: 'get_data' });
+        if (resHist.status === 'success') allHistoryData = resHist.data;
+        
+        Swal.close();
+        
+        // Buka kembali list dengan data yang sudah di-refresh
+        showMasterList();
+    }
+
     async function showMasterList() {
-        Swal.fire({ title: 'Memuat List...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        // HAPUS LOADING DISINI AGAR TIDAK NGE-BUG SAAT DATA SUDAH TAMPIL
         
         let historyToCheck = allHistoryData;
+        
+        // Ambil data jika kosong (dilakukan transparan di background agar popup tidak nge-bug)
         if (historyToCheck.length === 0) {
             const res = await apiCall({ action: 'get_data' });
             if (res.status === 'success') {
@@ -533,7 +553,6 @@
         }
 
         let storeHistory = historyToCheck.filter(d => d.Store === currentUser.store);
-        
         let historyMap = {};
         storeHistory.forEach(d => {
             if(!historyMap[d.Permintaan]) {
@@ -565,7 +584,14 @@
             </button>`;
         }).join('');
         
-        let searchInput = `<input type="text" id="search-kategori" class="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 mb-3 text-sm outline-none focus:border-blue-500" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">`;
+        // MENAMBAHKAN TOMBOL SYNC DI SAMPING KOTAK PENCARIAN
+        let searchInput = `
+        <div class="flex gap-2 mb-3">
+            <input type="text" id="search-kategori" class="flex-1 bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">
+            <button onclick="syncKategoriData()" class="bg-blue-50 text-blue-600 border border-blue-200 rounded-xl px-4 flex items-center justify-center transition active:bg-blue-100 shadow-sm">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+        </div>`;
 
         Swal.fire({ 
             title: 'Pilih Kategori Barang', 
