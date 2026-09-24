@@ -5,156 +5,186 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pengadaan PWA</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#F2F2F7">
+    <meta name="theme-color" content="#ffffff">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #E5E5EA; -webkit-tap-highlight-color: transparent; }
         
-        /* Container Khusus agar tampilan di Desktop/PC elegan (seperti emulator HP) */
-        .app-container { background-color: #F2F2F7; max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden;}
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #F2F2F7; -webkit-tap-highlight-color: transparent; margin: 0; overflow: hidden; }
         
-        .ios-card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 20px; border: 1px solid #f0f0f0;}
+        .ios-card { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 20px; border: 1px solid #f9f9f9;}
         .ios-input { background: #F7F7F9; border: 1px solid #E5E5EA; border-radius: 12px; padding: 12px 14px; width: 100%; outline: none; transition: 0.2s;}
-        .ios-input:focus { border-color: #007AFF; background: white;}
+        .ios-input:focus { border-color: #007AFF; background: white; box-shadow: 0 0 0 3px rgba(0,122,255,0.1);}
         .ios-btn { background: #007AFF; color: white; border-radius: 14px; padding: 14px; width: 100%; font-weight: 600; transition: 0.2s;}
+        .ios-btn:active { transform: scale(0.98); opacity: 0.9; }
         
         .photo-box { aspect-ratio: 1/1; border: 2px dashed #D1D1D6; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #FAFAFC; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s;}
-        .photo-box:active { background: #E5E5EA; }
+        .photo-box:hover { border-color: #007AFF; background: #F4F9FF; }
         .photo-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10; }
-        .btn-remove-photo { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 26px; height: 26px; z-index: 20; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;}
+        .btn-remove-photo { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: white; border-radius: 50%; width: 28px; height: 28px; z-index: 20; display: flex; align-items: center; justify-content: center;}
         
-        .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; margin-top: auto; position: sticky; bottom: 0; z-index: 40;}
-        .nav-item { color: #8E8E93; transition: 0.2s; width: 33.33%; padding: 10px 0;}
+        /* Navigasi Adaptif (Mobile & Desktop) */
+        .nav-item { color: #8E8E93; transition: 0.2s; cursor: pointer; }
         .nav-item.active { color: #007AFF; font-weight: 600; }
-        .hidden { display: none !important; }
+        
+        @media (min-width: 768px) {
+            .nav-item { padding: 14px 20px; border-radius: 14px; margin-bottom: 8px; }
+            .nav-item.active { background-color: #EFF6FF; } /* Efek Blok Biru Khusus PC */
+            
+            /* Sembunyikan scrollbar bawaan agar rapi */
+            ::-webkit-scrollbar { width: 6px; }
+            ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
+        }
         
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-gray-800">
-
-<!-- WRAPPER UNTUK TAMPILAN PC/DESKTOP -->
-<div class="app-container">
+<body>
 
     <!-- SPLASH SCREEN -->
-    <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white sm:absolute">
+    <div id="splash-view" class="fixed inset-0 bg-blue-600 z-50 flex flex-col items-center justify-center text-white">
         <i class="fa-solid fa-box-open text-6xl mb-4 animate-bounce"></i>
         <h2 class="text-xl font-bold">Memuat Sistem...</h2>
     </div>
 
     <!-- LOGIN -->
-    <div id="login-view" class="hidden flex-1 items-center justify-center p-4">
-        <div class="ios-card w-full">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl"><i class="fa-solid fa-box"></i></div>
-                <h2 class="text-2xl font-bold">Pengadaan Apps</h2>
+    <div id="login-view" class="hidden h-screen w-full items-center justify-center p-4 bg-white md:bg-gray-50">
+        <div class="ios-card w-full max-w-md shadow-2xl">
+            <div class="text-center mb-6 mt-4">
+                <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm"><i class="fa-solid fa-box"></i></div>
+                <h2 class="text-2xl font-bold text-gray-800">Sistem Pengadaan</h2>
+                <p class="text-sm text-gray-500 mt-1">Masuk untuk melanjutkan</p>
             </div>
             <div class="space-y-4">
                 <input type="text" id="login-nik" class="ios-input" placeholder="Nomor NIK">
                 <input type="password" id="login-pass" class="ios-input" placeholder="Password">
-                <button id="btn-login" onclick="login()" class="ios-btn mt-2">Masuk</button>
+                <button id="btn-login" onclick="login()" class="ios-btn mt-4 shadow-lg shadow-blue-500/30">Masuk Aplikasi</button>
             </div>
         </div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="dashboard-view" class="hidden flex-1 flex flex-col">
+    <!-- DASHBOARD RESPONSIVE (FLEX H-SCREEN) -->
+    <div id="dashboard-view" class="hidden h-screen w-full flex-col md:flex-row bg-[#F2F2F7]">
         
-        <!-- Header -->
-        <div class="bg-white px-6 pt-10 pb-4 shadow-sm sticky top-0 z-30 rounded-b-[20px] flex justify-between items-center">
-            <div>
-                <h1 id="page-title" class="text-2xl font-bold">Form Pengajuan</h1>
-                <p id="user-store-info" class="text-xs text-gray-500 mt-1"></p>
-            </div>
-            <button onclick="syncOffline()" class="relative text-blue-600 p-2.5 bg-blue-50 rounded-full active:bg-blue-100 transition">
-                <i id="sync-icon" class="fa-solid fa-rotate text-lg"></i>
-                <span id="sync-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden border-2 border-white"></span>
-            </button>
-        </div>
-
-        <div class="p-4 w-full mx-auto flex-1 pb-24">
+        <!-- ============================================== -->
+        <!-- NAVIGASI: BOTTOM DI HP, SIDEBAR KIRI DI PC -->
+        <!-- ============================================== -->
+        <nav class="bg-white/95 backdrop-blur-md border-t md:border-t-0 md:border-r border-gray-200 fixed md:relative bottom-0 left-0 w-full md:w-72 h-[70px] md:h-screen flex flex-row md:flex-col justify-around md:justify-start z-40 md:pt-8 md:px-5 pb-[env(safe-area-inset-bottom)]">
             
-            <!-- FORM PENGADAAN (KHUSUS STAFF) -->
-            <div id="page-form-pengadaan" class="page-content ios-card">
-                <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
-                    <input type="hidden" id="edit-id-pengadaan" value="">
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-1 ml-1">Kategori / Nama Barang</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="item-input" class="ios-input flex-1" placeholder="Ketik bebas atau pilih..." oninput="saveDraft()" required>
-                            <button type="button" onclick="showMasterList()" class="bg-blue-100 text-blue-600 px-4 rounded-xl shadow-sm"><i class="fa-solid fa-list-ul"></i></button>
+            <!-- Logo & Info Store (Khusus Desktop) -->
+            <div class="hidden md:flex flex-col items-center mb-10 text-center">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3 text-3xl border border-blue-100 shadow-sm"><i class="fa-solid fa-boxes-stacked"></i></div>
+                <h2 class="font-bold text-gray-800 text-lg">Pengadaan App</h2>
+                <span id="role-badge" class="text-[11px] bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-bold mt-2 uppercase tracking-wide border border-gray-200">Staff</span>
+            </div>
+
+            <!-- Tombol Navigasi Staff -->
+            <button onclick="switchTab('form-pengadaan')" id="nav-form-pengadaan" class="nav-item flex flex-col md:flex-row items-center justify-center md:justify-start md:gap-4 w-full pt-2 md:pt-0" style="display: none;">
+                <i class="fa-solid fa-pen-to-square text-xl md:text-lg mb-1 md:mb-0 md:w-6 text-center"></i><span class="text-[10px] md:text-sm font-medium">Buat Form</span>
+            </button>
+            <button onclick="switchTab('data-pengadaan')" id="nav-data-pengadaan" class="nav-item flex flex-col md:flex-row items-center justify-center md:justify-start md:gap-4 w-full pt-2 md:pt-0" style="display: none;">
+                <i class="fa-solid fa-clock-rotate-left text-xl md:text-lg mb-1 md:mb-0 md:w-6 text-center"></i><span class="text-[10px] md:text-sm font-medium">Histori Saya</span>
+            </button>
+            
+            <!-- Tombol Navigasi Admin -->
+            <button onclick="switchTab('admin-approval')" id="nav-admin-approval" class="nav-item flex flex-col md:flex-row items-center justify-center md:justify-start md:gap-4 w-full pt-2 md:pt-0 text-red-500" style="display: none;">
+                <i class="fa-solid fa-clipboard-check text-xl md:text-lg mb-1 md:mb-0 md:w-6 text-center"></i><span class="text-[10px] md:text-sm font-medium">Approval</span>
+            </button>
+            <button onclick="switchTab('admin-history')" id="nav-admin-history" class="nav-item flex flex-col md:flex-row items-center justify-center md:justify-start md:gap-4 w-full pt-2 md:pt-0 text-blue-500" style="display: none;">
+                <i class="fa-solid fa-list-check text-xl md:text-lg mb-1 md:mb-0 md:w-6 text-center"></i><span class="text-[10px] md:text-sm font-medium">Data Histori</span>
+            </button>
+            
+            <!-- Tombol Keluar -->
+            <div class="md:mt-auto md:w-full md:mb-4 w-full flex justify-center md:justify-start">
+                <button onclick="logout()" class="nav-item flex flex-col md:flex-row items-center justify-center md:justify-start md:gap-4 w-full pt-2 md:pt-0 hover:text-red-500 hover:bg-red-50 transition">
+                    <i class="fa-solid fa-power-off text-xl md:text-lg mb-1 md:mb-0 md:w-6 text-center"></i><span class="text-[10px] md:text-sm font-medium">Keluar</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- ============================================== -->
+        <!-- MAIN CONTENT: AREA KANAN (SCROLLABLE) -->
+        <!-- ============================================== -->
+        <main class="flex-1 h-screen overflow-y-auto pb-24 md:pb-8 relative w-full">
+            
+            <!-- HEADER ATAS KONTEN -->
+            <div class="bg-white/80 backdrop-blur-xl px-5 pt-8 md:pt-6 pb-4 shadow-sm sticky top-0 z-30 flex justify-between items-center md:px-8 border-b border-gray-100">
+                <div>
+                    <h1 id="page-title" class="text-2xl md:text-3xl font-bold tracking-tight text-gray-800">Form Pengajuan</h1>
+                    <p id="user-store-info" class="text-xs md:text-sm text-gray-500 mt-1 font-medium"></p>
+                </div>
+                <button onclick="syncOffline()" class="relative text-blue-600 w-10 h-10 flex items-center justify-center bg-blue-50 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-100">
+                    <i id="sync-icon" class="fa-solid fa-rotate text-lg"></i>
+                    <span id="sync-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full hidden border-2 border-white"></span>
+                </button>
+            </div>
+
+            <!-- CONTAINER ISI -->
+            <div class="p-4 md:p-8 max-w-lg md:max-w-5xl mx-auto">
+                
+                <!-- HALAMAN: FORM PENGADAAN -->
+                <div id="page-form-pengadaan" class="page-content ios-card md:p-8">
+                    <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
+                        <input type="hidden" id="edit-id-pengadaan" value="">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ml-1 text-gray-700">Kategori / Nama Barang</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="item-input" class="ios-input flex-1" placeholder="Pilih atau ketik bebas..." oninput="saveDraft()" required>
+                                    <button type="button" onclick="showMasterList()" class="bg-blue-50 text-blue-600 px-5 rounded-xl border border-blue-100 hover:bg-blue-100 transition"><i class="fa-solid fa-list-ul"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ml-1 text-gray-700">Deskripsi & Keterangan <span class="text-red-500">*</span></label>
+                                <textarea id="deskripsi" class="ios-input min-h-[50px] md:min-h-[45px]" oninput="saveDraft()" required></textarea>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-1 ml-1">Deskripsi & Keterangan <span class="text-red-500">*</span></label>
-                        <textarea id="deskripsi" class="ios-input min-h-[80px]" oninput="saveDraft()" required></textarea>
-                    </div>
-                    
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-2 ml-1">Upload Foto</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <script>
-                                for(let i=1; i<=3; i++) {
-                                    document.write(`
-                                        <div class="photo-box text-center" onclick="pilihSumberFoto(${i})">
-                                            <i class="fa-solid fa-camera-retro text-gray-400 text-xl mb-1 mt-2"></i>
-                                            <span class="text-[9px] font-medium text-gray-500">Tambah ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
-                                            <img id="preview${i}" class="photo-preview hidden">
-                                            <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-[10px]"></i></button>
-                                        </div>
-                                        <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
-                                        <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
-                                    `);
-                                }
-                            </script>
+                        
+                        <div class="mb-8">
+                            <label class="block text-sm font-semibold mb-3 ml-1 text-gray-700">Upload Foto Pendukung</label>
+                            <div class="grid grid-cols-3 gap-3 md:gap-6">
+                                <script>
+                                    for(let i=1; i<=3; i++) {
+                                        document.write(`
+                                            <div class="photo-box text-center shadow-sm" onclick="pilihSumberFoto(${i})">
+                                                <i class="fa-solid fa-camera-retro text-gray-400 text-2xl md:text-3xl mb-2 mt-2"></i>
+                                                <span class="text-[10px] md:text-xs font-medium text-gray-500">Foto ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
+                                                <img id="preview${i}" class="photo-preview hidden">
+                                                <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                            </div>
+                                            <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})">
+                                            <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
+                                        `);
+                                    }
+                                </script>
+                            </div>
                         </div>
-                    </div>
-                    <button type="submit" id="btn-submit" class="ios-btn bg-blue-600"><i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan</button>
-                    <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="ios-btn bg-gray-200 text-gray-700 mt-3 hidden">Batal Edit</button>
-                </form>
-            </div>
+                        
+                        <div class="flex gap-3">
+                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="ios-btn bg-gray-100 text-gray-700 w-1/3 hidden border border-gray-200">Batal Edit</button>
+                            <button type="submit" id="btn-submit" class="ios-btn bg-blue-600 flex-1 shadow-lg shadow-blue-500/20"><i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Pengadaan</button>
+                        </div>
+                    </form>
+                </div>
 
-            <!-- HISTORY & ADMIN PAGE -->
-            <div id="page-data-pengadaan" class="page-content hidden">
-                <input type="text" id="search-history" class="ios-input mb-4 shadow-sm" placeholder="🔍 Cari data..." oninput="searchData(this.value)">
-                <div id="list-history-container" class="space-y-4"></div>
-                <button id="btn-load-more" onclick="loadMoreData()" class="ios-btn bg-gray-200 text-gray-700 mt-4 hidden">Tampilkan 10 Lagi</button>
-            </div>
-        </div>
-
-        <!-- BOTTOM NAV (DIPERBARUI LOGIC NYA UNTUK ADMIN) -->
-        <div class="bottom-nav flex justify-around shadow-[0_-4px_15px_rgba(0,0,0,0.02)] pb-4 pt-2">
-            
-            <!-- TOMBOL STAFF -->
-            <button onclick="switchTab('form-pengadaan')" id="nav-form-pengadaan" class="nav-item active flex flex-col items-center">
-                <i class="fa-solid fa-pen-to-square text-xl mb-1"></i><span class="text-[10px]">Buat</span>
-            </button>
-            <button onclick="switchTab('data-pengadaan')" id="nav-data-pengadaan" class="nav-item flex flex-col items-center">
-                <i class="fa-solid fa-clock-rotate-left text-xl mb-1"></i><span class="text-[10px]">Histori</span>
-            </button>
-            
-            <!-- TOMBOL ADMIN (Hanya tampil untuk admin) -->
-            <button onclick="switchTab('admin-approval')" id="nav-admin-approval" class="nav-item hidden flex flex-col items-center text-red-500">
-                <i class="fa-solid fa-clipboard-check text-xl mb-1"></i><span class="text-[10px]">Approval</span>
-            </button>
-            <button onclick="switchTab('admin-history')" id="nav-admin-history" class="nav-item hidden flex flex-col items-center text-blue-500">
-                <i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px]">Histori</span>
-            </button>
-
-            <!-- KELUAR UMUM -->
-            <button onclick="logout()" class="nav-item flex flex-col items-center">
-                <i class="fa-solid fa-power-off text-xl mb-1"></i><span class="text-[10px]">Keluar</span>
-            </button>
-        </div>
-    </div>
-
-</div> <!-- PENUTUP WRAPPER PC -->
+                <!-- HALAMAN: HISTORY & ADMIN -->
+                <div id="page-data-pengadaan" class="page-content hidden">
+                    <input type="text" id="search-history" class="ios-input mb-6 shadow-sm border-white" placeholder="🔍 Cari nama barang, store, atau status..." oninput="searchData(this.value)">
+                    
+                    <!-- CONTAINER LIST (Otomatis Grid 2 Kolom di PC) -->
+                    <div id="list-history-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    
+                    <button id="btn-load-more" onclick="loadMoreData()" class="ios-btn bg-white text-gray-700 mt-6 hidden border border-gray-200 shadow-sm">Tampilkan Lebih Banyak</button>
+                </div>
+                
+            </div> <!-- End Container -->
+        </main>
+    </div> <!-- End Dashboard Wrapper -->
 
 <script>
     if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
@@ -169,10 +199,8 @@
     async function apiCall(data) {
         try { 
             return await (await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) })).json(); 
-        } 
-        catch (err) { 
-            console.error("Fetch Error:", err);
-            return {status: 'error', message: 'Koneksi Terputus atau Diblokir (Cek sw.js)'}; 
+        } catch (err) { 
+            return {status: 'error', message: 'Koneksi Terputus (Sedang Offline)'}; 
         }
     }
 
@@ -196,50 +224,53 @@
     };
 
     function forceLogin(msg = '') {
-        document.getElementById('splash-view').classList.add('hidden');
+        document.getElementById('splash-view').style.display = 'none';
         document.getElementById('login-view').classList.remove('hidden');
-        document.getElementById('login-view').classList.add('flex');
+        document.getElementById('login-view').style.display = 'flex';
         if(msg) Swal.fire('Sesi Berakhir', msg, 'warning');
     }
 
     function proceedToDashboard() {
-        document.getElementById('splash-view').classList.add('hidden');
-        document.getElementById('login-view').classList.add('hidden');
-        document.getElementById('login-view').classList.remove('flex');
+        document.getElementById('splash-view').style.display = 'none';
+        document.getElementById('login-view').style.display = 'none';
         document.getElementById('dashboard-view').classList.remove('hidden');
-        document.getElementById('dashboard-view').classList.add('flex');
+        document.getElementById('dashboard-view').style.display = 'flex'; // Fix layout wrapper
         
         document.getElementById('user-store-info').innerHTML = `<i class="fa-solid fa-store text-blue-500"></i> ${currentUser.store}`;
         
-        // Atur Navigasi berdasarkan Role
+        // Atur Tampilan Menu Berdasarkan Hak Akses
+        let badge = document.getElementById('role-badge');
         if (currentUser.role === 'admin') {
-            document.getElementById('nav-form-pengadaan').classList.add('hidden');
-            document.getElementById('nav-data-pengadaan').classList.add('hidden');
+            document.getElementById('nav-form-pengadaan').style.display = 'none';
+            document.getElementById('nav-data-pengadaan').style.display = 'none';
+            document.getElementById('nav-admin-approval').style.display = 'flex';
+            document.getElementById('nav-admin-history').style.display = 'flex';
             
-            document.getElementById('nav-admin-approval').classList.remove('hidden');
-            document.getElementById('nav-admin-approval').classList.add('flex');
-            
-            document.getElementById('nav-admin-history').classList.remove('hidden');
-            document.getElementById('nav-admin-history').classList.add('flex');
-            
+            badge.innerText = 'Administrator';
+            badge.className = 'text-[11px] bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold mt-2 border border-red-200 uppercase tracking-wide';
             switchTab('admin-approval');
         } else {
-            document.getElementById('nav-admin-approval').classList.add('hidden');
-            document.getElementById('nav-admin-history').classList.add('hidden');
+            document.getElementById('nav-admin-approval').style.display = 'none';
+            document.getElementById('nav-admin-history').style.display = 'none';
+            document.getElementById('nav-form-pengadaan').style.display = 'flex';
+            document.getElementById('nav-data-pengadaan').style.display = 'flex';
+            
+            badge.innerText = 'Staff Toko';
+            badge.className = 'text-[11px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold mt-2 border border-blue-200 uppercase tracking-wide';
             switchTab('form-pengadaan');
         }
     }
 
     async function login() {
-        const btn = document.getElementById('btn-login'); btn.innerHTML = 'Loading...'; btn.disabled = true;
+        const btn = document.getElementById('btn-login'); btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifikasi...'; btn.disabled = true;
         const res = await apiCall({ action: 'login', nik: document.getElementById('login-nik').value, password: document.getElementById('login-pass').value, ip: globalIP, lokasi: globalLoc });
-        btn.innerHTML = 'Masuk'; btn.disabled = false;
+        btn.innerHTML = 'Masuk Aplikasi'; btn.disabled = false;
         if (res.status === 'success') {
             localStorage.setItem('session_user', JSON.stringify(res.user));
             localStorage.setItem('session_time', Date.now().toString());
             currentUser = res.user;
             proceedToDashboard();
-        } else Swal.fire('Gagal', res.message || 'Offline', 'error');
+        } else Swal.fire('Gagal Masuk', res.message || 'Server Sedang Sibuk/Offline', 'error');
     }
 
     function logout() { 
@@ -330,8 +361,7 @@
     }
 
     function previewImgDirect(url) {
-        let directUrl = url;
-        let fileId = url.match(/[-\w]{25,}/);
+        let directUrl = url; let fileId = url.match(/[-\w]{25,}/);
         if(fileId && fileId[0]) directUrl = `https://drive.google.com/thumbnail?id=${fileId[0]}&sz=w1000`; 
         Swal.fire({
             imageUrl: directUrl, imageAlt: 'Foto', showConfirmButton: false, showCloseButton: true,
@@ -348,7 +378,7 @@
     async function processForm() {
         const isEdit = document.getElementById('edit-id-pengadaan').value !== "";
         const isFoto1Kosong = document.getElementById('preview1').classList.contains('hidden');
-        if(!isEdit && isFoto1Kosong) return Swal.fire('Peringatan', 'Foto 1 Wajib diisi!', 'warning');
+        if(!isEdit && isFoto1Kosong) return Swal.fire('Peringatan', 'Foto 1 Wajib dilampirkan!', 'warning');
 
         const p = {
             action: isEdit ? 'edit_pengadaan' : 'submit_pengadaan', 
@@ -367,7 +397,8 @@
         document.getElementById('form-submit').reset(); [1,2,3].forEach(i => removePhoto(i));
         localStorage.removeItem('draft_pengadaan'); cancelEdit();
         updateSyncBadge();
-        Swal.fire({icon: 'success', title: 'Data Diajukan', text: 'Data disimpan & akan disinkronkan.', timer: 2000, showConfirmButton: false});
+        
+        Swal.fire({icon: 'success', title: 'Data Masuk Antrean', text: 'Data akan tersinkron otomatis ke server.', timer: 2000, showConfirmButton: false});
         syncOffline(); switchTab('data-pengadaan');
     }
 
@@ -383,7 +414,7 @@
             if(res.status === 'success') {
                 queue.shift(); localStorage.setItem('offlineQueue', JSON.stringify(queue)); updateSyncBadge();
             } else {
-                if(res.message && res.message.includes('Pending')) Swal.fire('Gagal', res.message, 'error'); break; 
+                if(res.message && res.message.includes('Pending')) Swal.fire('Gagal Disinkron', res.message, 'error'); break; 
             }
         }
         document.getElementById('sync-icon').classList.remove('spin'); isSyncing = false;
@@ -393,25 +424,26 @@
     function switchTab(tabId) {
         currentTab = tabId;
         
-        // Sembunyikan semua halaman & hapus status aktif di nav
-        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+        // Hapus class active dari semua tombol
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        // Sembunyikan semua konten halaman
+        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
         
-        // Tentukan Div Halaman mana yang dibuka
-        let pageIdToShow = (tabId === 'admin-approval' || tabId === 'admin-history' || tabId === 'data-pengadaan') ? 'data-pengadaan' : tabId;
-        document.getElementById('page-' + pageIdToShow).classList.remove('hidden');
-        
-        // Aktifkan Nav yang diklik
+        // Aktifkan tab yang di-klik
         let navBtn = document.getElementById('nav-' + tabId);
         if(navBtn) navBtn.classList.add('active');
 
-        // Ganti Judul
-        if (tabId === 'admin-approval') document.getElementById('page-title').innerText = "Menunggu Approval";
+        // Logic Layout Halaman: Admin Approval & History berbagi desain tabel yang sama
+        let pageIdToShow = (tabId === 'admin-approval' || tabId === 'admin-history' || tabId === 'data-pengadaan') ? 'data-pengadaan' : tabId;
+        document.getElementById('page-' + pageIdToShow).classList.remove('hidden');
+
+        // Ganti Header Title
+        if (tabId === 'admin-approval') document.getElementById('page-title').innerText = "Menunggu Persetujuan";
         else if (tabId === 'admin-history') document.getElementById('page-title').innerText = "Semua Histori";
         else if (tabId === 'data-pengadaan') document.getElementById('page-title').innerText = "Histori Pengajuan";
-        else document.getElementById('page-title').innerText = "Form Pengajuan";
+        else document.getElementById('page-title').innerText = "Buat Pengajuan";
 
-        // Ambil data jika halaman tipe histori
+        // Eksekusi Fetch Data jika tab nya berhubungan dengan history/list
         if (pageIdToShow === 'data-pengadaan') {
             document.getElementById('search-history').value = '';
             currentSearchTerm = '';
@@ -421,13 +453,14 @@
 
     async function fetchHistory() {
         const container = document.getElementById('list-history-container');
-        container.innerHTML = '<div class="text-center p-10"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>Sinkronisasi Data...</div>';
+        container.innerHTML = '<div class="col-span-full text-center p-10"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-blue-500"></i><br><span class="font-medium text-gray-500">Menarik data server...</span></div>';
+        
         const res = await apiCall({ action: 'get_data' });
         if (res.status === 'success') {
             allHistoryData = res.data;
             displayedCount = 10; renderHistory();
         } else {
-            container.innerHTML = '<div class="text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-2 text-2xl"></i><br>Koneksi Terputus. Cek Jaringan/SW.</div>';
+            container.innerHTML = '<div class="col-span-full text-center p-10 text-red-500"><i class="fa-solid fa-wifi mb-3 text-3xl"></i><br><b>Koneksi Terputus</b><br><span class="text-xs text-gray-500">Gagal menarik data baru dari server.</span></div>';
         }
     }
 
@@ -438,79 +471,96 @@
         const container = document.getElementById('list-history-container');
         let filtered = allHistoryData;
 
-        // Filter berdasarkan peran & Tab
+        // Filtering Logika Sesuai Tab
         if (currentUser.role === 'admin') {
             if (currentTab === 'admin-approval') {
+                // Admin Approval: Hanya tampil Pending atau Request Cancel
                 filtered = filtered.filter(d => d.Status === 'Pending' || d.Status === 'Request Cancel');
             } 
-            // jika admin-history, tampilkan semua (tidak perlu di filter status)
+            // jika currentTab === 'admin-history', biarkan tampil semua tanpa filter
         } else {
-            // Staff hanya lihat data dari tokonya sendiri
+            // Jika Staff biasa, filter HANYA data toko dia sendiri
             filtered = filtered.filter(d => d.Store === currentUser.store);
         }
 
-        // Filter dari kotak pencarian
+        // Filtering berdasarkan input kotak Search
         filtered = filtered.filter(d => (d.Permintaan+d.Status+d.Store+d.Deskripsi_Detail).toLowerCase().includes(currentSearchTerm));
         
-        if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-4 text-gray-500">Tidak ada data.</div>'; document.getElementById('btn-load-more').classList.add('hidden'); return; }
+        if(filtered.length === 0) { 
+            container.innerHTML = '<div class="col-span-full text-center p-10 text-gray-400 bg-white rounded-xl border border-gray-100"><i class="fa-solid fa-folder-open text-4xl mb-3"></i><br>Tidak ada data ditemukan.</div>'; 
+            document.getElementById('btn-load-more').classList.add('hidden'); return; 
+        }
 
         let toShow = filtered.slice(0, displayedCount); container.innerHTML = '';
         
         toShow.forEach(d => {
-            let badgeStyle = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
-            if(d.Status === 'Request Cancel') badgeStyle = 'bg-orange-100 text-orange-700';
+            let badgeStyle = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200');
+            if(d.Status === 'Request Cancel') badgeStyle = 'bg-orange-100 text-orange-700 border-orange-200';
 
             let btnAction = '';
             
-            // LOGIKA TOMBOL STAFF
+            // TOMBOL AKSI STAFF
             if(currentUser.role !== 'admin') {
                 if(d.Status === 'Pending') {
                     btnAction = `
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-2 rounded-xl w-1/2 font-bold text-xs shadow-sm"><i class="fa-solid fa-pen mr-1"></i> Edit</button>
-                        <button onclick="requestCancel('${d.ID_Pengadaan}')" class="bg-red-50 text-red-600 border border-red-100 px-3 py-2 rounded-xl w-1/2 font-bold text-xs shadow-sm"><i class="fa-solid fa-xmark mr-1"></i> Batal</button>
+                    <div class="flex gap-2 mt-4 border-t pt-3 border-gray-100">
+                        <button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-2.5 rounded-xl w-1/2 font-bold text-xs shadow-sm transition"><i class="fa-solid fa-pen mr-1.5"></i> Edit</button>
+                        <button onclick="requestCancel('${d.ID_Pengadaan}')" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-2.5 rounded-xl w-1/2 font-bold text-xs shadow-sm transition"><i class="fa-solid fa-xmark mr-1.5"></i> Batal</button>
                     </div>`;
                 }
             } 
-            // LOGIKA TOMBOL ADMIN
+            // TOMBOL AKSI ADMIN
             else {
                 if(currentTab === 'admin-approval' && (d.Status === 'Pending' || d.Status === 'Request Cancel')) {
-                    let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : 'Approve';
-                    let rejText = d.Status === 'Request Cancel' ? 'Setuju Cancel' : 'Reject';
+                    let accText = d.Status === 'Request Cancel' ? 'Tolak Cancel' : '<i class="fa-solid fa-check mr-1"></i> Approve';
+                    let rejText = d.Status === 'Request Cancel' ? 'Setuju Cancel' : '<i class="fa-solid fa-xmark mr-1"></i> Reject';
                     let rejVal = d.Status === 'Request Cancel' ? 'Canceled' : 'Rejected';
                     let accVal = d.Status === 'Request Cancel' ? 'Pending' : 'Approved'; 
-                    btnAction = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', '${accVal}')" class="bg-green-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${accText}</button><button onclick="actionStatus('${d.ID_Pengadaan}', '${rejVal}')" class="bg-red-500 text-white p-2 rounded-xl w-1/2 font-bold text-xs shadow-sm">${rejText}</button></div>`;
+                    btnAction = `<div class="flex gap-2 mt-4 border-t pt-3 border-gray-100">
+                        <button onclick="actionStatus('${d.ID_Pengadaan}', '${accVal}')" class="bg-green-500 hover:bg-green-600 text-white p-2.5 rounded-xl w-1/2 font-bold text-xs shadow-sm transition">${accText}</button>
+                        <button onclick="actionStatus('${d.ID_Pengadaan}', '${rejVal}')" class="bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-xl w-1/2 font-bold text-xs shadow-sm transition">${rejText}</button>
+                    </div>`;
                 } else if(d.Status === 'Approved') {
-                    let resiState = d.Resi_Pengiriman ? 'Edit Resi Pengiriman' : '🔴 Input Info Pengiriman';
-                    btnAction = `<button onclick="actionResi('${d.ID_Pengadaan}', '${d.Resi_Pengiriman||''}')" class="mt-3 bg-blue-500 text-white w-full py-2 rounded-xl text-xs font-bold shadow-sm"><i class="fa-solid fa-truck"></i> ${resiState}</button>`;
+                    let resiState = d.Resi_Pengiriman ? 'Edit No. Resi' : 'Input Info Pengiriman';
+                    let bgBtnResi = d.Resi_Pengiriman ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-blue-600 text-white hover:bg-blue-700';
+                    btnAction = `<button onclick="actionResi('${d.ID_Pengadaan}', '${d.Resi_Pengiriman||''}')" class="mt-4 ${bgBtnResi} w-full py-2.5 rounded-xl text-xs font-bold shadow-sm transition border"><i class="fa-solid fa-truck-fast mr-1.5"></i> ${resiState}</button>`;
                 }
             }
 
-            let fotos = `<div onclick="previewImgDirect('${d.Foto_1}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_2) fotos += `<div onclick="previewImgDirect('${d.Foto_2}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_3) fotos += `<div onclick="previewImgDirect('${d.Foto_3}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            let fotos = `<div onclick="previewImgDirect('${d.Foto_1}')" class="w-12 h-12 md:w-14 md:h-14 bg-gray-50 rounded-xl flex items-center justify-center text-blue-500 border border-gray-200 cursor-pointer hover:bg-gray-100 transition"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_2) fotos += `<div onclick="previewImgDirect('${d.Foto_2}')" class="w-12 h-12 md:w-14 md:h-14 bg-gray-50 rounded-xl flex items-center justify-center text-blue-500 border border-gray-200 cursor-pointer hover:bg-gray-100 transition"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_3) fotos += `<div onclick="previewImgDirect('${d.Foto_3}')" class="w-12 h-12 md:w-14 md:h-14 bg-gray-50 rounded-xl flex items-center justify-center text-blue-500 border border-gray-200 cursor-pointer hover:bg-gray-100 transition"><i class="fa-solid fa-image"></i></div>`;
 
+            // Cetak HTML untuk setiap Card Data
             container.innerHTML += `
-                <div class="ios-card relative mb-3">
-                    <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md ${badgeStyle}">${d.Status}</span>
-                    <h3 class="font-bold text-sm pr-16">${d.Permintaan}</h3>
-                    <p class="text-[10px] text-gray-500 mb-2">${new Date(d.Waktu).toLocaleString('id-ID')}</p>
-                    ${currentUser.role === 'admin' ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store} (${d.Nama})</p>` : ''}
-                    <div class="bg-gray-50 border p-2.5 rounded-lg mb-2 text-xs text-gray-700">${d.Deskripsi_Detail}</div>
-                    <div class="flex gap-2 mb-1">${fotos}</div>
-                    ${d.Keterangan_Admin ? `<div class="mt-2 text-[11px] text-red-600 font-bold">Catatan: ${d.Keterangan_Admin}</div>` : ''}
-                    ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded-lg font-bold"><i class="fa-solid fa-truck-fast"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
+                <div class="ios-card relative flex flex-col justify-between">
+                    <div>
+                        <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md border ${badgeStyle}">${d.Status}</span>
+                        <h3 class="font-bold text-[15px] md:text-base text-gray-800 pr-16 leading-tight">${d.Permintaan}</h3>
+                        <p class="text-[11px] text-gray-500 mb-2 mt-1"><i class="fa-regular fa-clock mr-1"></i>${new Date(d.Waktu).toLocaleString('id-ID')}</p>
+                        
+                        ${currentUser.role === 'admin' ? `<div class="text-[11px] bg-blue-50 text-blue-700 px-2 py-1.5 rounded-lg border border-blue-100 font-semibold mb-3 inline-block"><i class="fa-solid fa-store mr-1"></i> ${d.Store} <span class="font-normal text-gray-500 ml-1">(${d.Nama})</span></div>` : ''}
+                        
+                        <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl mb-3 text-xs text-gray-700 leading-relaxed font-medium">${d.Deskripsi_Detail}</div>
+                        
+                        <div class="flex gap-2 mb-2">${fotos}</div>
+                        
+                        ${d.Keterangan_Admin ? `<div class="mt-3 text-[11px] bg-red-50 text-red-700 p-2 border border-red-100 rounded-lg font-bold"><i class="fa-solid fa-circle-info mr-1"></i> Info Admin: ${d.Keterangan_Admin}</div>` : ''}
+                        ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded-lg font-bold"><i class="fa-solid fa-box-open mr-1"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
+                    </div>
                     ${btnAction}
                 </div>`;
         });
-        document.getElementById('btn-load-more').className = filtered.length > displayedCount ? 'ios-btn bg-gray-200 text-gray-700 mt-4' : 'hidden';
+        
+        document.getElementById('btn-load-more').style.display = filtered.length > displayedCount ? 'block' : 'none';
+        document.getElementById('btn-load-more').className = 'ios-btn bg-white text-gray-700 w-full mt-4 border border-gray-200 shadow-sm col-span-full';
     }
 
     async function requestCancel(id) {
         Swal.fire({ title: 'Yakin batalkan?', text: 'Admin harus menyetujui pembatalan ini.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Batalkan' })
         .then(async (result) => {
             if (result.isConfirmed) {
-                Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
+                Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                 const res = await apiCall({ action: 'request_cancel', id: id, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
                 if (res.status === 'success') { Swal.fire('Terkirim', 'Request cancel diajukan.', 'success'); fetchHistory(); }
             }
@@ -524,7 +574,7 @@
         document.getElementById('deskripsi').value = desk;
         document.getElementById('btn-cancel-edit').classList.remove('hidden');
         document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Perubahan';
-        Swal.fire({icon: 'info', title: 'Edit Mode', text: 'Silakan perbarui data pengajuan Anda.', timer:2000});
+        Swal.fire({icon: 'info', title: 'Mode Edit Aktif', text: 'Silakan perbarui data pengajuan Anda.', timer:2000, showConfirmButton: false});
     }
 
     function cancelEdit() {
@@ -536,18 +586,18 @@
     }
 
     async function actionStatus(id, status) {
-        const { value: ket } = await Swal.fire({ title: status, input: 'text', inputPlaceholder: 'Catatan admin...', showCancelButton: true });
+        const { value: ket } = await Swal.fire({ title: 'Konfirmasi ' + status, input: 'text', inputPlaceholder: 'Catatan tambahan admin (Boleh kosong)...', showCancelButton: true, confirmButtonText: 'Simpan', confirmButtonColor: '#007AFF' });
         if (ket !== undefined) {
-            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             const res = await apiCall({ action: 'update_status', id, status, keterangan: ket, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
-            if (res.status === 'success') { Swal.fire('Berhasil', '', 'success'); fetchHistory(); }
+            if (res.status === 'success') { Swal.fire('Berhasil Disimpan', '', 'success'); fetchHistory(); }
         }
     }
 
     async function actionResi(id, curResi) {
-        const { value: resi } = await Swal.fire({ title: 'Info Pengiriman', input: 'text', inputValue: curResi, inputPlaceholder: 'Cth: JNE - 12345', showCancelButton: true });
+        const { value: resi } = await Swal.fire({ title: 'Info Pengiriman', input: 'text', inputValue: curResi, inputPlaceholder: 'Cth: Dikirim via JNE / Titip Driver...', showCancelButton: true, confirmButtonText: 'Simpan Info', confirmButtonColor: '#007AFF' });
         if (resi !== undefined) {
-            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             const res = await apiCall({ action: 'update_resi', id, resi, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
             if (res.status === 'success') { Swal.fire('Tersimpan', '', 'success'); fetchHistory(); }
         }
@@ -561,9 +611,7 @@
     window.filterKategori = function(val) {
         let term = val.toLowerCase();
         let items = document.querySelectorAll('.kategori-item');
-        items.forEach(el => {
-            el.style.display = el.getAttribute('data-nama').includes(term) ? 'flex' : 'none';
-        });
+        items.forEach(el => { el.style.display = el.getAttribute('data-nama').includes(term) ? 'flex' : 'none'; });
     }
 
     window.syncKategoriData = async function() {
@@ -581,6 +629,7 @@
             const res = await apiCall({ action: 'get_data' });
             if (res.status === 'success') { allHistoryData = res.data; historyToCheck = res.data; }
         }
+        
         let storeHistory = historyToCheck.filter(d => d.Store === currentUser.store);
         let historyMap = {}; storeHistory.forEach(d => { if(!historyMap[d.Permintaan]) historyMap[d.Permintaan] = d; });
 
@@ -592,21 +641,21 @@
                 let statusColor = lastReq.Status === 'Approved' ? 'text-green-600' : (lastReq.Status === 'Pending' ? 'text-yellow-600' : 'text-red-600');
                 let tgl = new Date(lastReq.Waktu).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
                 badge = `<span class="text-[9px] bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 font-bold whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Pernah</span>`;
-                dateInfo = `<div class="text-[10px] text-gray-500 mt-1">Diinput Tanggal ${tgl} <span class="font-bold ${statusColor}">(${lastReq.Status})</span></div>`;
+                dateInfo = `<div class="text-[10px] text-gray-500 mt-1.5">Diinput Tanggal ${tgl} <span class="font-bold ${statusColor}">(${lastReq.Status})</span></div>`;
             } else {
                 badge = `<span class="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 font-bold whitespace-nowrap"><i class="fa-solid fa-star mr-1"></i>Baru</span>`;
             }
-            return `<button class="kategori-item w-full text-left p-3 border-b active:bg-gray-100 flex justify-between items-start gap-2" onclick="selectItem('${item}')" data-nama="${item.toLowerCase()}">
-                <div><span class="font-bold text-gray-700 text-sm">${item}</span>${dateInfo}</div>${badge}
+            return `<button class="kategori-item w-full text-left p-3.5 border-b active:bg-gray-100 flex justify-between items-start gap-3 transition" onclick="selectItem('${item}')" data-nama="${item.toLowerCase()}">
+                <div><span class="font-bold text-gray-700 text-[13px] md:text-sm leading-tight">${item}</span>${dateInfo}</div>${badge}
             </button>`;
         }).join('');
         
         let searchInput = `<div class="flex gap-2 mb-3">
-            <input type="text" id="search-kategori" class="flex-1 bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">
-            <button onclick="syncKategoriData()" class="bg-blue-50 text-blue-600 border border-blue-200 rounded-xl px-4 flex items-center justify-center transition active:bg-blue-100 shadow-sm"><i class="fa-solid fa-rotate"></i></button>
+            <input type="text" id="search-kategori" class="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:bg-white transition shadow-inner" placeholder="🔍 Cari nama barang..." oninput="filterKategori(this.value)">
+            <button onclick="syncKategoriData()" class="bg-blue-50 text-blue-600 border border-blue-200 rounded-xl px-5 flex items-center justify-center transition hover:bg-blue-100 active:scale-95 shadow-sm"><i class="fa-solid fa-rotate"></i></button>
         </div>`;
 
-        Swal.fire({ title: 'Pilih Kategori Barang', html: searchInput + `<div id="kategori-container" class="max-h-60 overflow-y-auto text-sm text-left border border-gray-100 rounded-xl">${htmlListItems}</div>`, showConfirmButton: false, showCloseButton: true });
+        Swal.fire({ title: '<span class="text-lg font-bold">Pilih Kategori Barang</span>', html: searchInput + `<div id="kategori-container" class="max-h-72 overflow-y-auto text-sm text-left border border-gray-100 rounded-xl shadow-sm bg-white">${htmlListItems}</div>`, showConfirmButton: false, showCloseButton: true, customClass: { popup: 'rounded-3xl p-5' } });
     }
     
     function selectItem(val) { document.getElementById('item-input').value = val; saveDraft(); Swal.close(); }
