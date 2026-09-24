@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistem Pengadaan</title>
+    <title>Pengadaan PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007AFF">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -14,21 +16,16 @@
         .ios-input { background: #F7F7F9; border: 1px solid #E5E5EA; border-radius: 12px; padding: 12px 14px; width: 100%; outline: none; transition: 0.2s;}
         .ios-input:focus { border-color: #007AFF; background: white;}
         .ios-btn { background: #007AFF; color: white; border-radius: 14px; padding: 14px; width: 100%; font-weight: 600; transition: 0.2s;}
-        .ios-btn:active { transform: scale(0.97); }
-        .ios-btn:disabled { opacity: 0.5; }
-        
         .photo-box { aspect-ratio: 1/1; border: 2px dashed #D1D1D6; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #FAFAFC; cursor: pointer; position: relative; overflow: hidden; transition: 0.2s;}
         .photo-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10; }
-        
-        /* Icon Galeri di Kiri Atas */
         .btn-gallery { position: absolute; top: 5px; left: 5px; background: rgba(255,255,255,0.9); color: #007AFF; border-radius: 50%; width: 28px; height: 28px; z-index: 20; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        /* Icon Hapus di Kanan Atas */
         .btn-remove-photo { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 24px; height: 24px; z-index: 20; display: flex; align-items: center; justify-content: center; }
-        
         .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; }
         .nav-item { color: #8E8E93; transition: 0.2s; }
         .nav-item.active { color: #007AFF; font-weight: 600; }
         .hidden { display: none !important; }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -55,49 +52,42 @@
                 <h1 id="page-title" class="text-2xl font-bold">Form Pengajuan</h1>
                 <p id="user-store-info" class="text-xs text-gray-500 mt-1"></p>
             </div>
+            <!-- SYNC ICON -->
+            <button onclick="syncOffline()" class="relative text-blue-600 p-2 bg-blue-50 rounded-full active:bg-blue-100">
+                <i id="sync-icon" class="fa-solid fa-rotate text-xl"></i>
+                <span id="sync-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden border border-white"></span>
+            </button>
         </div>
 
         <div class="p-4 max-w-lg mx-auto">
-            
             <!-- FORM PENGADAAN -->
             <div id="page-form-pengadaan" class="page-content ios-card">
-                <form id="form-submit" onsubmit="event.preventDefault(); submitPengadaan();">
-                    <input type="hidden" id="edit-id-pengadaan" value="">
-                    
+                <form id="form-submit" onsubmit="event.preventDefault(); processForm();">
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-1 ml-1">Kategori / Nama Barang</label>
                         <div class="flex gap-2">
                             <input type="text" id="item-input" class="ios-input flex-1" placeholder="Ketik bebas atau pilih..." required>
-                            <button type="button" onclick="showMasterList()" class="bg-blue-100 text-blue-600 px-4 rounded-xl flex items-center justify-center shadow-sm active:bg-blue-200">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
+                            <button type="button" onclick="showMasterList()" class="bg-blue-100 text-blue-600 px-4 rounded-xl shadow-sm"><i class="fa-solid fa-list-ul"></i></button>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="block text-sm font-semibold mb-1 ml-1">Deskripsi & Keterangan <span class="text-red-500">*</span></label>
-                        <textarea id="deskripsi" class="ios-input min-h-[80px]" required placeholder="Cth: Butuh ukuran L 2 pcs, warna hitam. Kondisi stok saat ini kosong."></textarea>
+                        <textarea id="deskripsi" class="ios-input min-h-[80px]" required></textarea>
                     </div>
                     
-                    <!-- FOTO UPLOAD (Kamera & Galeri) -->
                     <div class="mb-6">
-                        <label class="block text-sm font-semibold mb-2 ml-1">Upload Foto <span class="text-xs text-gray-500 font-normal">(Auto Watermark)</span></label>
+                        <label class="block text-sm font-semibold mb-2 ml-1">Upload Foto</label>
                         <div class="grid grid-cols-3 gap-3">
-                            
-                            <!-- LOOP 3 BOX -->
                             <script>
                                 for(let i=1; i<=3; i++) {
                                     document.write(`
                                         <div class="photo-box text-center" onclick="document.getElementById('cam${i}').click()">
-                                            <button type="button" class="btn-gallery" onclick="event.stopPropagation(); document.getElementById('gal${i}').click();">
-                                                <i class="fa-solid fa-images text-xs"></i>
-                                            </button>
+                                            <button type="button" class="btn-gallery" onclick="event.stopPropagation(); document.getElementById('gal${i}').click();"><i class="fa-solid fa-images text-xs"></i></button>
                                             <i class="fa-solid fa-camera text-gray-400 text-xl mb-1"></i>
                                             <span class="text-[9px] font-medium text-gray-500">Foto ${i} ${i==1?'<span class="text-red-500">*</span>':''}</span>
-                                            
                                             <img id="preview${i}" class="photo-preview hidden">
                                             <button type="button" id="btn-hapus-${i}" class="btn-remove-photo hidden" onclick="event.stopPropagation(); removePhoto(${i})"><i class="fa-solid fa-xmark text-xs"></i></button>
-                                            
                                             <input type="file" id="cam${i}" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this, ${i})" ${i==1?'required':''}>
                                             <input type="file" id="gal${i}" accept="image/*" class="hidden" onchange="handlePhoto(this, ${i})">
                                         </div>
@@ -106,18 +96,14 @@
                             </script>
                         </div>
                     </div>
-
-                    <button type="submit" id="btn-submit" class="ios-btn bg-blue-600"><i class="fa-solid fa-paper-plane mr-2"></i> Kirim Pengajuan</button>
-                    <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="ios-btn bg-gray-200 text-gray-700 mt-3 hidden">Batal Edit</button>
+                    <button type="submit" class="ios-btn bg-blue-600"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Simpan (Upload Latar Belakang)</button>
                 </form>
             </div>
 
-            <!-- PAGE: HISTORY DATA -->
+            <!-- HISTORY & ADMIN PAGE -->
             <div id="page-data-pengadaan" class="page-content hidden">
-                <input type="text" id="search-history" class="ios-input mb-4" placeholder="Cari nama barang, status, detail..." oninput="searchData(this.value)">
-                
+                <input type="text" id="search-history" class="ios-input mb-4" placeholder="Cari data..." oninput="searchData(this.value)">
                 <div id="list-history-container" class="space-y-4"></div>
-                
                 <button id="btn-load-more" onclick="loadMoreData()" class="ios-btn bg-gray-200 text-gray-700 mt-4 hidden">Tampilkan 10 Lagi</button>
             </div>
         </div>
@@ -125,131 +111,67 @@
         <!-- BOTTOM NAV -->
         <div class="bottom-nav fixed bottom-0 left-0 w-full flex justify-around p-3 pb-6 z-40">
             <button onclick="switchTab('form-pengadaan')" id="nav-form-pengadaan" class="nav-item active flex flex-col items-center w-1/4">
-                <i class="fa-solid fa-pen-to-square text-xl mb-1"></i>
-                <span class="text-[10px]">Buat</span>
+                <i class="fa-solid fa-pen-to-square text-xl mb-1"></i><span class="text-[10px]">Buat</span>
             </button>
             <button onclick="switchTab('data-pengadaan')" id="nav-data-pengadaan" class="nav-item flex flex-col items-center w-1/4">
-                <i class="fa-solid fa-clock-rotate-left text-xl mb-1"></i>
-                <span class="text-[10px]">Histori</span>
+                <i class="fa-solid fa-clock-rotate-left text-xl mb-1"></i><span class="text-[10px]">Histori</span>
             </button>
             <button onclick="switchTab('admin-approval')" id="nav-admin" class="nav-item hidden flex flex-col items-center w-1/4 text-red-500">
-                <i class="fa-solid fa-clipboard-check text-xl mb-1"></i>
-                <span class="text-[10px]">Admin</span>
+                <i class="fa-solid fa-clipboard-check text-xl mb-1"></i><span class="text-[10px]">Admin</span>
             </button>
             <button onclick="logout()" class="nav-item flex flex-col items-center w-1/4">
-                <i class="fa-solid fa-power-off text-xl mb-1"></i>
-                <span class="text-[10px]">Keluar</span>
+                <i class="fa-solid fa-power-off text-xl mb-1"></i><span class="text-[10px]">Keluar</span>
             </button>
         </div>
     </div>
 
 <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOXfNPB_DhenXiDVYoTxyW9VYdWRWHk9K-athxAFNwuRFdZiWAi_94J06Wcaralx1x/exec'; 
+    // PWA REGISTRATION
+    if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxtYSdTsNpFBrVnmGqQZk0SfukE3ohSFfPVwIAVSNGAZhe7kIAkRmtkcckActRZ7ReG/exec'; 
     let currentUser = null, globalIP = 'Unknown', globalLoc = 'Akses Lokasi Ditolak';
     let masterBarangList = [];
-    
-    // History Pagination & Search
-    let allHistoryData = [];
-    let displayedCount = 10;
-    let currentSearchTerm = '';
-    let isAdminView = false;
+    let allHistoryData = [], displayedCount = 10, currentSearchTerm = '', isAdminView = false;
+    let isSyncing = false;
 
-    // Init Trackers
+    // Trackers
     fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>globalIP=d.ip).catch(e=>{});
     navigator.geolocation.getCurrentPosition(p=>globalLoc=`${p.coords.latitude}, ${p.coords.longitude}`, e=>{});
 
+    // API CALLER
     async function apiCall(data) {
         try { return await (await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) })).json(); } 
-        catch (err) { return {status: 'error', message: 'Koneksi error.'}; }
+        catch (err) { return {status: 'error', message: 'Offline'}; }
     }
 
-    // LIST MASTER MODAL
-    async function initSystemData() {
-        const res = await apiCall({action: 'init_data'});
-        if(res.status === 'success') masterBarangList = res.master_barang;
-    }
-    initSystemData();
-
-    function showMasterList() {
-        let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b active:bg-gray-100" onclick="selectItem('${item}')">${item}</button>`).join('');
-        Swal.fire({
-            title: 'Pilih Barang',
-            html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`,
-            showConfirmButton: false, showCloseButton: true
-        });
-    }
-
-    function selectItem(val) {
-        document.getElementById('item-input').value = val;
-        Swal.close();
-    }
-
-    // PREVIEW, CAMERA, GALLERY, WATERMARK
-    function handlePhoto(input, num) {
-        const file = input.files[0];
-        if (file) {
-            document.getElementById('preview' + num).src = URL.createObjectURL(file);
-            document.getElementById('preview' + num).classList.remove('hidden');
-            document.getElementById('btn-hapus-' + num).classList.remove('hidden');
-            // Supaya validasi Form menganggap file sudah terisi (meski galeri/kamera salah satu yg terisi)
-            if(num === 1) { document.getElementById('cam1').required = false; }
+    // CHECK SESSION ON LOAD (Persistent Login 12 Jam)
+    window.onload = async function() {
+        updateSyncBadge();
+        initSystemData();
+        const savedSession = localStorage.getItem('session_user');
+        const savedTime = localStorage.getItem('session_time');
+        
+        if(savedSession && savedTime) {
+            // Cek jika lebih dari 12 Jam (43200000 ms)
+            if(Date.now() - parseInt(savedTime) > 43200000) { logout(); return; }
+            
+            currentUser = JSON.parse(savedSession);
+            // Verify Token ke Backend
+            const res = await apiCall({action: 'check_session', nik: currentUser.nik, token: currentUser.token});
+            if(res.status === 'success') {
+                proceedToDashboard();
+                syncOffline(); // Auto sync on open
+            } else { logout(); Swal.fire('Sesi Berakhir', res.message, 'warning'); }
         }
-    }
+    };
 
-    function removePhoto(num) {
-        document.getElementById('cam' + num).value = ''; document.getElementById('gal' + num).value = '';
-        document.getElementById('preview' + num).src = ''; document.getElementById('preview' + num).classList.add('hidden');
-        document.getElementById('btn-hapus-' + num).classList.add('hidden');
-        if(num === 1) { document.getElementById('cam1').required = true; } // Wajibkan lagi
-    }
-
-    function compressImage(fileElementCam, fileElementGal) {
-        // Ambil file yang terisi (entah dari kamera atau galeri)
-        let file = fileElementCam.files[0] || fileElementGal.files[0];
-        return new Promise((resolve) => {
-            if (!file) return resolve(null);
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = event => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    if (w > 1000) { h = Math.round((h * 1000) / w); w = 1000; }
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    
-                    // --- WATERMARK (Transparan Text & Shadow) ---
-                    ctx.font = "bold 24px Arial";
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; // Putih sedikit transparan
-                    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";     // Bayangan hitam tebal
-                    ctx.shadowBlur = 5; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    
-                    const timeStr = new Date().toLocaleString('id-ID');
-                    const wmText = `PENGADAAN\nUser: ${currentUser.nama}\nStore: ${currentUser.store}\nTime: ${timeStr}\nLoc: ${globalLoc}`;
-                    const lines = wmText.split('\n');
-                    let y = h - (lines.length * 30) - 20; // Mulai dari bawah
-                    
-                    lines.forEach(line => {
-                        ctx.fillText(line, 20, y); y += 30;
-                    });
-                    
-                    resolve(canvas.toDataURL('image/jpeg', 0.8)); // Output
-                };
-            };
-        });
-    }
-
-    // PREVIEW FOTO TANPA TAB BARU
-    function previewImgDirect(url) {
-        Swal.fire({
-            imageUrl: url, imageAlt: 'Foto Pengadaan',
-            showConfirmButton: false, showCloseButton: true,
-            customClass: { popup: 'rounded-2xl p-1 bg-transparent' },
-            backdrop: `rgba(0,0,0,0.8)`
-        });
+    function proceedToDashboard() {
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('dashboard-view').classList.remove('hidden');
+        document.getElementById('user-store-info').innerHTML = `<i class="fa-solid fa-store text-blue-500"></i> ${currentUser.store}`;
+        if (currentUser.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
+        switchTab('form-pengadaan');
     }
 
     async function login() {
@@ -258,42 +180,28 @@
         btn.innerHTML = 'Masuk'; btn.disabled = false;
         
         if (res.status === 'success') {
+            localStorage.setItem('session_user', JSON.stringify(res.user));
+            localStorage.setItem('session_time', Date.now().toString());
             currentUser = res.user;
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
-            document.getElementById('user-store-info').innerHTML = `<i class="fa-solid fa-store text-blue-500"></i> ${currentUser.store}`;
-            if (currentUser.role === 'admin') document.getElementById('nav-admin').classList.remove('hidden');
-            switchTab('form-pengadaan');
-        } else Swal.fire('Gagal', res.message, 'error');
+            proceedToDashboard();
+        } else Swal.fire('Gagal', res.message || 'Offline', 'error');
     }
 
-    function logout() { location.reload(); }
-
-    function switchTab(tabId) {
-        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        if(tabId === 'admin-approval') {
-            isAdminView = true;
-            document.getElementById('page-data-pengadaan').classList.remove('hidden');
-            document.getElementById('nav-admin').classList.add('active');
-            document.getElementById('page-title').innerText = "Approval Admin";
-            fetchHistory();
-        } else {
-            isAdminView = false;
-            document.getElementById(`page-${tabId}`).classList.remove('hidden');
-            document.getElementById(`nav-${tabId}`).classList.add('active');
-            document.getElementById('page-title').innerText = tabId === 'data-pengadaan' ? "Histori Pengajuan" : "Form Pengajuan";
-            if (tabId === 'data-pengadaan') fetchHistory();
-        }
+    function logout() { 
+        localStorage.removeItem('session_user'); localStorage.removeItem('session_time');
+        location.reload(); 
     }
 
-    async function submitPengadaan() {
-        const btn = document.getElementById('btn-submit');
-        const editId = document.getElementById('edit-id-pengadaan').value;
-        btn.innerHTML = 'Memproses & Upload...'; btn.disabled = true;
+    // OFFLINE QUEUE SYSTEM
+    function updateSyncBadge() {
+        const q = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+        const badge = document.getElementById('sync-badge');
+        if(q.length > 0) badge.classList.remove('hidden'); else badge.classList.add('hidden');
+    }
 
+    async function processForm() {
         const p = {
-            action: editId ? 'edit_pengadaan' : 'submit_pengadaan', id_pengadaan: editId,
+            action: 'submit_pengadaan', local_id: 'REQ-' + Date.now(),
             nik: currentUser.nik, nama: currentUser.nama, store: currentUser.store,
             permintaan: document.getElementById('item-input').value,
             deskripsi: document.getElementById('deskripsi').value,
@@ -302,126 +210,184 @@
             foto3: await compressImage(document.getElementById('cam3'), document.getElementById('gal3')),
             ip: globalIP, lokasi: globalLoc
         };
-
-        const res = await apiCall(p);
-        btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Kirim Pengajuan'; btn.disabled = false;
-
-        if (res.status === 'success') {
-            Swal.fire({ icon: 'success', title: 'Berhasil!', text: res.message, timer: 2000, showConfirmButton: false });
-            cancelEdit(); switchTab('data-pengadaan');
-        } else Swal.fire('Gagal', res.message, 'error');
+        
+        // Save to Queue
+        let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+        queue.push(p);
+        localStorage.setItem('offlineQueue', JSON.stringify(queue));
+        
+        // Reset Form
+        document.getElementById('form-submit').reset();
+        [1,2,3].forEach(i => removePhoto(i));
+        
+        updateSyncBadge();
+        Swal.fire({icon: 'info', title: 'Tersimpan!', text: 'Data disimpan di antrean. Proses upload berjalan di latar belakang.', timer: 2000});
+        syncOffline(); // Trigger sync
+        switchTab('data-pengadaan');
     }
 
-    // PENCARIAN & HISTORY
+    async function syncOffline() {
+        if(isSyncing) return;
+        let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+        if(queue.length === 0) return;
+
+        isSyncing = true;
+        document.getElementById('sync-icon').classList.add('spin');
+
+        while(queue.length > 0) {
+            const item = queue[0];
+            const res = await apiCall(item);
+            if(res.status === 'success') {
+                queue.shift(); // Remove from queue
+                localStorage.setItem('offlineQueue', JSON.stringify(queue));
+                updateSyncBadge();
+            } else {
+                break; // Stop jika error/offline
+            }
+        }
+        document.getElementById('sync-icon').classList.remove('spin');
+        isSyncing = false;
+        if(document.getElementById('page-data-pengadaan').classList.contains('hidden') === false) fetchHistory();
+    }
+
+    // PREVIEW FOTO GOOGLE DRIVE (FIX)
+    // GDrive image via Script tidak bisa embed di Web. Fix: Buka di Tab Baru.
+    function openGDrivePhoto(url) {
+        if(url && url.startsWith('http')) window.open(url, '_blank');
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        isAdminView = tabId === 'admin-approval';
+        document.getElementById(`page-${tabId === 'admin-approval' ? 'data-pengadaan' : tabId}`).classList.remove('hidden');
+        document.getElementById(`nav-${tabId}`).classList.add('active');
+        document.getElementById('page-title').innerText = tabId === 'admin-approval' ? "Admin Panel" : (tabId === 'data-pengadaan' ? "Histori Pengajuan" : "Form Pengajuan");
+        if (tabId === 'data-pengadaan' || isAdminView) fetchHistory();
+    }
+
     async function fetchHistory() {
         const container = document.getElementById('list-history-container');
-        container.innerHTML = '<div class="text-center p-10 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><br>Memuat Data...</div>';
-        document.getElementById('btn-load-more').classList.add('hidden');
-
+        container.innerHTML = '<div class="text-center p-10"><i class="fa-solid fa-spinner fa-spin"></i><br>Sinkronisasi Data...</div>';
         const res = await apiCall({ action: 'get_data' });
         if (res.status === 'success') {
-            // Filter hak akses
-            allHistoryData = isAdminView ? res.data.filter(d => d.Status === 'Pending') : res.data.filter(d => d.Store === currentUser.store);
+            allHistoryData = isAdminView ? res.data : res.data.filter(d => d.Store === currentUser.store);
             displayedCount = 10;
             renderHistory();
+        } else {
+            container.innerHTML = '<div class="text-center p-10 text-red-500">Anda sedang offline.</div>';
         }
     }
 
-    function searchData(val) {
-        currentSearchTerm = val.toLowerCase();
-        displayedCount = 10;
-        renderHistory();
-    }
-
-    function loadMoreData() {
-        displayedCount += 10;
-        renderHistory();
-    }
+    function searchData(val) { currentSearchTerm = val.toLowerCase(); displayedCount = 10; renderHistory(); }
+    function loadMoreData() { displayedCount += 10; renderHistory(); }
 
     function renderHistory() {
         const container = document.getElementById('list-history-container');
-        
-        // Filter Search
-        let filtered = allHistoryData.filter(d => {
-            return d.Permintaan.toLowerCase().includes(currentSearchTerm) || 
-                   d.Deskripsi_Detail.toLowerCase().includes(currentSearchTerm) || 
-                   d.Status.toLowerCase().includes(currentSearchTerm);
-        });
-
-        if(filtered.length === 0) {
-            container.innerHTML = '<div class="text-center p-10 text-gray-400">Data tidak ditemukan.</div>';
-            document.getElementById('btn-load-more').classList.add('hidden');
-            return;
-        }
+        let filtered = allHistoryData.filter(d => (d.Permintaan+d.Status+d.Store+d.ID_Pengadaan).toLowerCase().includes(currentSearchTerm));
+        if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-4">Tidak ada data.</div>'; document.getElementById('btn-load-more').classList.add('hidden'); return; }
 
         let toShow = filtered.slice(0, displayedCount);
         container.innerHTML = '';
-
         toShow.forEach(d => {
             let badge = d.Status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : (d.Status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
-            let timeValid = (new Date().getTime() - new Date(d.Waktu).getTime()) <= 600000;
-            let btnEdit = (!isAdminView && d.Status === 'Pending' && timeValid) ? `<button onclick="startEdit('${d.ID_Pengadaan}', '${d.Permintaan}', '${d.Deskripsi_Detail}')" class="mt-2 text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-xl w-full font-bold">Edit Pengajuan (Maks 10 Mnt)</button>` : '';
-            let btnAdmin = isAdminView ? `<div class="flex gap-2 mt-3"><button onclick="actionAdmin('${d.ID_Pengadaan}', 'Approved')" class="bg-green-500 text-white rounded-xl px-3 py-2 text-xs font-bold w-1/2">Approve</button><button onclick="actionAdmin('${d.ID_Pengadaan}', 'Rejected')" class="bg-red-500 text-white rounded-xl px-3 py-2 text-xs font-bold w-1/2">Reject</button></div>` : '';
+            
+            // ADMIN UI: Note Pengiriman
+            let adminActions = '';
+            if(isAdminView) {
+                if(d.Status === 'Pending') {
+                    adminActions = `<div class="flex gap-2 mt-3"><button onclick="actionStatus('${d.ID_Pengadaan}', 'Approved')" class="bg-green-500 text-white p-2 rounded w-1/2 font-bold text-xs">Approve</button><button onclick="actionStatus('${d.ID_Pengadaan}', 'Rejected')" class="bg-red-500 text-white p-2 rounded w-1/2 font-bold text-xs">Reject</button></div>`;
+                } else if(d.Status === 'Approved') {
+                    let resiState = d.Resi_Pengiriman ? 'Edit Resi / Pengiriman' : '🔴 Input Info Pengiriman';
+                    adminActions = `<button onclick="actionResi('${d.ID_Pengadaan}', '${d.Resi_Pengiriman||''}')" class="mt-3 bg-blue-500 text-white w-full py-2 rounded text-xs font-bold"><i class="fa-solid fa-truck"></i> ${resiState}</button>`;
+                }
+            }
 
-            // Foto dengan Onclick Preview
-            let fotos = `<div onclick="previewImgDirect('${d.Foto_1}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm cursor-pointer border"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_2) fotos += `<div onclick="previewImgDirect('${d.Foto_2}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm cursor-pointer border"><i class="fa-solid fa-image"></i></div>`;
-            if(d.Foto_3) fotos += `<div onclick="previewImgDirect('${d.Foto_3}')" class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-blue-500 shadow-sm cursor-pointer border"><i class="fa-solid fa-image"></i></div>`;
+            let fotos = `<div onclick="openGDrivePhoto('${d.Foto_1}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_2) fotos += `<div onclick="openGDrivePhoto('${d.Foto_2}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
+            if(d.Foto_3) fotos += `<div onclick="openGDrivePhoto('${d.Foto_3}')" class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-blue-500 shadow border cursor-pointer"><i class="fa-solid fa-image"></i></div>`;
 
             container.innerHTML += `
-                <div class="ios-card relative mb-2">
-                    <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md ${badge}">${d.Status}</span>
-                    <h3 class="font-bold text-lg pr-16">${d.Permintaan}</h3>
-                    <p class="text-[11px] text-gray-500 mt-0.5">${new Date(d.Waktu).toLocaleString('id-ID')}</p>
-                    ${isAdminView ? `<p class="text-xs text-blue-600 mt-1"><i class="fa-solid fa-store"></i> ${d.Store} (${d.Nama})</p>` : ''}
+                <div class="ios-card relative mb-3">
+                    <span class="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded ${badge}">${d.Status}</span>
+                    <h3 class="font-bold text-sm pr-16">${d.Permintaan}</h3>
+                    <p class="text-[10px] text-gray-500 mb-2">${new Date(d.Waktu).toLocaleString('id-ID')}</p>
+                    ${isAdminView ? `<p class="text-[11px] text-blue-600 font-bold mb-2"><i class="fa-solid fa-store"></i> ${d.Store}</p>` : ''}
                     
-                    <div class="bg-gray-50 border p-2.5 rounded-xl mt-3 mb-3">
-                        <p class="text-xs text-gray-700">${d.Deskripsi_Detail}</p>
-                    </div>
+                    <div class="bg-gray-50 border p-2 rounded mb-2 text-xs">${d.Deskripsi_Detail}</div>
                     
-                    <div class="flex items-center gap-2 mb-1">
-                        ${fotos}
-                        <a href="${d.Link_Folder}" target="_blank" class="ml-auto text-xs text-blue-500 font-medium bg-blue-50 px-2 py-1 rounded-lg border border-blue-100"><i class="fa-solid fa-folder-open"></i> Buka Folder</a>
-                    </div>
+                    <div class="flex gap-2">${fotos}</div>
                     
-                    ${d.Keterangan_Admin ? `<div class="mt-2 text-xs text-red-600 font-medium">Ket Admin: ${d.Keterangan_Admin}</div>` : ''}
-                    ${btnEdit} ${btnAdmin}
+                    ${d.Keterangan_Admin ? `<div class="mt-2 text-[11px] text-red-600 font-bold">Catatan: ${d.Keterangan_Admin}</div>` : ''}
+                    ${d.Resi_Pengiriman ? `<div class="mt-2 text-[11px] bg-green-50 text-green-700 p-2 border border-green-200 rounded font-bold"><i class="fa-solid fa-truck-fast"></i> Pengiriman: ${d.Resi_Pengiriman}</div>` : ''}
+                    ${adminActions}
                 </div>`;
         });
-
-        // Toggle Tombol "Tampilkan 10 Lagi"
-        if (filtered.length > displayedCount) {
-            document.getElementById('btn-load-more').classList.remove('hidden');
-        } else {
-            document.getElementById('btn-load-more').classList.add('hidden');
-        }
+        document.getElementById('btn-load-more').className = filtered.length > displayedCount ? 'ios-btn bg-gray-200 text-gray-700 mt-4' : 'hidden';
     }
 
-    function startEdit(id, perm, desk) {
-        switchTab('form-pengadaan');
-        document.getElementById('edit-id-pengadaan').value = id;
-        document.getElementById('item-input').value = perm;
-        document.getElementById('deskripsi').value = desk;
-        document.getElementById('btn-cancel-edit').classList.remove('hidden');
-        document.getElementById('cam1').required = false; 
-        Swal.fire({icon: 'info', title: 'Edit Mode', text: 'Sisa waktu 10 menit.', timer:2000});
-    }
-
-    function cancelEdit() {
-        document.getElementById('form-submit').reset();
-        document.getElementById('edit-id-pengadaan').value = "";
-        document.getElementById('btn-cancel-edit').classList.add('hidden');
-        document.getElementById('cam1').required = true;
-        [1,2,3].forEach(i => removePhoto(i));
-    }
-
-    async function actionAdmin(id, status) {
+    async function actionStatus(id, status) {
         const { value: ket } = await Swal.fire({ title: status, input: 'text', inputPlaceholder: 'Catatan admin...', showCancelButton: true });
         if (ket !== undefined) {
-            Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
-            const res = await apiCall({ action: 'update_status', id: id, status: status, keterangan: ket, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
-            if (res.status === 'success') { Swal.fire('Berhasil!', '', 'success'); fetchHistory(); }
+            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+            const res = await apiCall({ action: 'update_status', id, status, keterangan: ket, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
+            if (res.status === 'success') { Swal.fire('Berhasil', '', 'success'); fetchHistory(); }
         }
+    }
+
+    async function actionResi(id, curResi) {
+        const { value: resi } = await Swal.fire({ title: 'Info Pengiriman', input: 'text', inputValue: curResi, inputPlaceholder: 'Cth: Dikirim via JNE (Resi: 123) / Driver Budi', showCancelButton: true });
+        if (resi !== undefined) {
+            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+            const res = await apiCall({ action: 'update_resi', id, resi, nik: currentUser.nik, nama: currentUser.nama, ip: globalIP, lokasi: globalLoc });
+            if (res.status === 'success') { Swal.fire('Tersimpan', '', 'success'); fetchHistory(); }
+        }
+    }
+
+    /* FUNGSI COMPRESS & UTILS (Tetap sama seperti sebelumnya) */
+    function handlePhoto(input, num) {
+        if(input.files[0]) {
+            document.getElementById('preview' + num).src = URL.createObjectURL(input.files[0]);
+            document.getElementById('preview' + num).classList.remove('hidden');
+            document.getElementById('btn-hapus-' + num).classList.remove('hidden');
+            if(num === 1) document.getElementById('cam1').required = false; 
+        }
+    }
+    function removePhoto(num) {
+        document.getElementById('cam' + num).value = ''; document.getElementById('gal' + num).value = '';
+        document.getElementById('preview' + num).src = ''; document.getElementById('preview' + num).classList.add('hidden');
+        document.getElementById('btn-hapus-' + num).classList.add('hidden');
+        if(num === 1) document.getElementById('cam1').required = true;
+    }
+    async function initSystemData() {
+        const res = await apiCall({action: 'init_data'});
+        if(res.status === 'success') masterBarangList = res.master_barang;
+    }
+    function showMasterList() {
+        let htmlList = masterBarangList.map(item => `<button class="w-full text-left p-3 border-b" onclick="selectItem('${item}')">${item}</button>`).join('');
+        Swal.fire({ title: 'Pilih Barang', html: `<div class="max-h-60 overflow-y-auto text-sm">${htmlList}</div>`, showConfirmButton: false, showCloseButton: true });
+    }
+    function selectItem(val) { document.getElementById('item-input').value = val; Swal.close(); }
+    
+    function compressImage(c, g) {
+        let file = c.files[0] || g.files[0];
+        return new Promise((resolve) => {
+            if (!file) return resolve("");
+            const r = new FileReader(); r.readAsDataURL(file);
+            r.onload = e => {
+                const img = new Image(); img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas'); let w = img.width, h = img.height;
+                    if (w > 800) { h = Math.round((h * 800) / w); w = 800; }
+                    canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    ctx.font = "bold 20px Arial"; ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 4;
+                    const txt = `PENGADAAN\nStore: ${currentUser?.store}\nUser: ${currentUser?.nama}\nTime: ${new Date().toLocaleString('id-ID')}`;
+                    const lines = txt.split('\n'); let y = h - (lines.length * 25) - 10;
+                    lines.forEach(line => { ctx.fillText(line, 15, y); y += 25; });
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            };
+        });
     }
 </script>
 </body>
